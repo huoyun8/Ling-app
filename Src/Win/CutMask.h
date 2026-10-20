@@ -35,6 +35,14 @@ private:
 	void initWinRect();
 	// 尺寸标签只在 maskRect 变化时重建，不必每帧现建
 	void makeLayout();
+	// 把屏幕矩形裁剪进宿主窗口客户区并转成客户区坐标，合法才加入识别表
+	void pushClippedRect(const RECT& r);
+	// 递归收集顶层窗口里的子控件矩形，让识别能细化到按钮 / 面板等元素
+	static BOOL CALLBACK collectChild(HWND hwnd, LPARAM lp);
+	// 把一个坐标吸附到识别表里最近的边界（阈值内）
+	float snapCoord(float v, float threshold) const;
+	// 拖动框选时的吸附阈值
+	static constexpr float snapThreshold = 8.f;
 private:
 	Microsoft::WRL::ComPtr<ID2D1SolidColorBrush> brushBg;
 	Microsoft::WRL::ComPtr<ID2D1SolidColorBrush> brushBorder;

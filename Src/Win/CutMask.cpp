@@ -1,5 +1,7 @@
 ﻿#include "pch.h"
 #include <dwmapi.h>
+#include <cmath>
+#include <cfloat>
 #include <include/Ling.h>
 #include "CutMask.h"
 using namespace Microsoft::WRL;
@@ -18,18 +20,27 @@ CutMask::CutMask(Ling::WinBase* win) :win{ win }
 
 bool CutMask::highlight(POINT pos)
 {
+	// 智能识别：在识别表里找"包含光标的最小矩形"（越深层的子控件面积越小，越具体），
+	// 于是光标悬停在按钮上就吸到按钮、悬停在面板上就吸到面板、悬停在窗口上就吸到窗口
+	float bestArea{ FLT_MAX };
+	D2D1_RECT_F target{ 0.f,0.f,0.f,0.f };
 	for (auto& rect : winRect)
 	{
 		if (pos.x > rect.left && pos.y > rect.top && pos.x < rect.right && pos.y < rect.bottom) {
-			if (maskRect.left != rect.left || maskRect.top != rect.top ||
-				maskRect.right != rect.right || maskRect.bottom != rect.bottom) {
-				maskRect = rect;
-				makeLayout();
-				win->refresh();
-				return true;
+			float a = (rect.right - rect.left) * (rect.bottom - rect.top);
+			if (a < bestArea) {
+				bestArea = a;
+				target = rect;
 			}
-			break;
 		}
+	}
+	if (bestArea == FLT_MAX) return false;
+	if (maskRect.left != target.left || maskRect.top != target.top ||
+		maskRect.right != target.right || maskRect.bottom != target.bottom) {
+		maskRect = target;
+		makeLayout();
+		win->refresh();
+		return true;
 	}
 	return false;
 }
@@ -37,10 +48,16 @@ bool CutMask::highlight(POINT pos)
 void CutMask::initWinRect()
 {
 	winRect.clear();
-	EnumWindows([](HWND hwnd, LPARAM lparam)
+	// 只认外部窗口：本程序自己的截图窗 / 工具条 / 贴屏窗都是置顶全屏或悬浮，不参与识别，
+	// 否则光标一动就会先被"自己的全屏矩形"匹配到，智能识别永远吸不到桌面上别的窗口
+	const DWORD selfPid = GetCurrentProcessId();
+	EnumWindows([selfPid](HWND hwnd, LPARAM lparam)
 		{
 			if (!hwnd) return TRUE;
 			if (!IsWindowVisible(hwnd)) return TRUE;
+			DWORD wpid = 0;
+			GetWindowThreadProcessId(hwnd, &wpid);
+			if (wpid == selfPid) return TRUE;
 			BOOL cloaked = FALSE;
 			DwmGetWindowAttribute(hwnd, DWMWA_CLOAKED, &cloaked, sizeof(cloaked));
 			if (cloaked) return TRUE;
@@ -48,18 +65,51 @@ void CutMask::initWinRect()
 			DwmGetWindowAttribute(hwnd, DWMWA_EXTENDED_FRAME_BOUNDS, &rect, sizeof(RECT));
 			if (rect.right - rect.left <= 6 || rect.bottom - rect.top <= 6) return TRUE;
 			auto self = (CutMask*)lparam;
-			auto win = self->win;
-			if (rect.left < win->x) rect.left = win->x;
-			if (rect.top < win->y) rect.top = win->y;
-			if (rect.right > win->x + win->w) rect.right = (LONG)(win->x + win->w);
-			if (rect.bottom > win->y + win->h) rect.bottom = (LONG)(win->y + win->h);
-			auto x = (float)(rect.left - win->x);
-			auto y = (float)(rect.top - win->y);
-			auto r = (float)(rect.right - win->x);
-			auto b = (float)(rect.bottom - win->y);
-			self->winRect.push_back(D2D1::RectF(x, y, r, b));
+			self->pushClippedRect(rect);          // 顶层窗口本身
+			EnumChildWindows(hwnd, collectChild, lparam);  // 再收集它里面的子控件
 			return TRUE;
 		}, (LPARAM)this);
+}
+
+void CutMask::pushClippedRect(const RECT& r)
+{
+	auto win = this->win;
+	int hostL{ (int)win->x }, hostT{ (int)win->y };
+	int hostR{ (int)(win->x + win->w) }, hostB{ (int)(win->y + win->h) };
+	if (r.right <= hostL || r.bottom <= hostT || r.left >= hostR || r.top >= hostB) return;
+	RECT c = r;
+	if (c.left < hostL) c.left = hostL;
+	if (c.top < hostT) c.top = hostT;
+	if (c.right > hostR) c.right = hostR;
+	if (c.bottom > hostB) c.bottom = hostB;
+	if (c.right - c.left <= 6 || c.bottom - c.top <= 6) return;
+	winRect.push_back(D2D1::RectF(
+		(float)(c.left - win->x), (float)(c.top - win->y),
+		(float)(c.right - win->x), (float)(c.bottom - win->y)));
+}
+
+BOOL CALLBACK CutMask::collectChild(HWND hwnd, LPARAM lp)
+{
+	auto self = (CutMask*)lp;
+	if (hwnd && IsWindowVisible(hwnd)) {
+		RECT r;
+		if (GetWindowRect(hwnd, &r) && r.right - r.left > 6 && r.bottom - r.top > 6) {
+			self->pushClippedRect(r);
+		}
+		EnumChildWindows(hwnd, collectChild, lp);  // 递归到更深层的嵌套控件
+	}
+	return TRUE;
+}
+
+float CutMask::snapCoord(float v, float threshold) const
+{
+	float best = v, bestDist = threshold;
+	for (auto& r : winRect) {
+		// 每条竖边界都能被吸附，横坐标 v 就近取一条
+		if (std::fabs(r.left - v) <= bestDist) { bestDist = std::fabs(r.left - v); best = r.left; }
+		if (std::fabs(r.right - v) <= bestDist) { bestDist = std::fabs(r.right - v); best = r.right; }
+	}
+	return best;
 }
 
 void CutMask::makeLayout()
@@ -95,6 +145,15 @@ void CutMask::makeRect(POINT pos)
 {
 	auto [left, right] = std::minmax(pressPos.x, pos.x);
 	auto [top, bottom] = std::minmax(pressPos.y, pos.y);
+	// 拖动框选时的智能吸附：每条边就近吸附到识别表里的窗口 / 控件边界（阈值内），
+	// 这样拉出来的选区会自然贴齐窗口或按钮的边
+	const float th = snapThreshold * win->dpi;
+	left = (int)snapCoord((float)left, th);
+	right = (int)snapCoord((float)right, th);
+	top = (int)snapCoord((float)top, th);
+	bottom = (int)snapCoord((float)bottom, th);
+	if (right - left < minSize) right = left + (int)minSize;
+	if (bottom - top < minSize) bottom = top + (int)minSize;
 	maskRect.left = (float)left;
 	maskRect.right = (float)right;
 	maskRect.top = (float)top;
