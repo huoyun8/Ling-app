@@ -204,6 +204,12 @@ void WinPin::paintScaleTip(ID2D1DeviceContext* ctx)
 void WinPin::layoutTools()
 {
 	if (!toolMain || !toolSub) return;
+	// 钉屏态不带编辑器：工具条建好但从不显示，移动 / DPI 变化时也不把它请出来
+	if (pinned) {
+		toolMain->hide();
+		toolSub->hideTools();
+		return;
+	}
 	// WinPin 的 hwnd 此时可能还没创建（本函数会在构造期调用），所以用矩形而不是窗口句柄找显示器。
 	RECT winRect{ x, y, x + static_cast<int>(w), y + static_cast<int>(h) };
 	MONITORINFO mi{ .cbSize = sizeof(MONITORINFO) };
@@ -329,6 +335,8 @@ void WinPin::onDown(POINT pos, BOOL isRight)
 	// 这里不能抢先 SetCapture / 置 isMouseDown，否则拖选文本会被当成拖 shape。
 	if (editingText && textBox && textBox->isPosIn(pos)) return;
 	if (isRight) {
+		// 钉屏态：编辑器是不需要的，右键不把工具条请回来，保持只剩图
+		if (pinned) return;
 		// 右键在"有工具条"和"只剩图"这两个状态之间来回切。
 		// 藏着的时候（上一次右键收起来的）就把它请回来。位置先重排一遍：
 		// 藏着的这段时间里窗口可能被 Ctrl+滚轮缩放过，工具条的落点跟着变了
@@ -455,9 +463,9 @@ void WinPin::onUp(POINT pos, BOOL isRight)
 		// 没选画笔，这一下要么是拖完窗口（按新位置重排工具条），要么只是点了一下 ——
 		// 两种情况都把 ToolMain 显示出来：拖动期间它是藏着的，右键之后它也是藏着的，
 		// 左键点一下就是"我还要用工具条"。ToolSub 由 curId 驱动，这会儿仍然不该出来，
-		// layoutTools 里已经管了
+		// layoutTools 里已经管了。钉屏态不显示编辑器，所以跳过 show
 		layoutTools();
-		toolMain->show();
+		if (!pinned) toolMain->show();
 	}
 	else if (shapeHover) {
 		// 新建的这一笔按下马上弹起，什么也没画出来：直接丢掉，

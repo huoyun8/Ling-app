@@ -65,4 +65,7 @@ private:
 	bool isClosed{ false };
 	// onDpiChanged 与 onSizeChanged 之间的接力标记，见构造函数里的注释
 	bool dpiChanged{ false };
+	// 钉屏态：贴屏出来的窗口是成品图，不带编辑器（ToolMain/ToolSub 一直隐藏）。
+	// 可拖动、双击/回车复制、Esc 关闭。WinPin 目前只由 WinCap 贴屏创建，故恒为钉屏态
+	bool pinned{ true };
 };
