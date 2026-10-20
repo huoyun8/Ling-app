@@ -59,6 +59,8 @@ private:
 	// 整个窗口内容都画在这块画布上，走 swap chain 后端
 	Ling::Canvas* canvas{ nullptr };
 	Microsoft::WRL::ComPtr<ID2D1SolidColorBrush> borderBrush;
+	// 1px 半透明内阴影，叠在蓝色边框内侧给贴屏窗口一个轻轮廓
+	Microsoft::WRL::ComPtr<ID2D1SolidColorBrush> innerShadowBrush;
 	// 右上角的倍数提示
 	Microsoft::WRL::ComPtr<IDWriteTextLayout> scaleTip;
 	Microsoft::WRL::ComPtr<ID2D1SolidColorBrush> brushTipBg, brushTipText;

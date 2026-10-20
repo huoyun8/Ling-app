@@ -278,7 +278,9 @@ void WinPin::onCreated()
     canvas = body->makeChild<Ling::Canvas>();
     canvas->enableSwapChain();
     canvas->setSizePercent(100.f, 100.f);
-    d2d->deviceContext->CreateSolidColorBrush(D2D1::ColorF(0x000000, 0.35f), borderBrush.GetAddressOf());
+    d2d->deviceContext->CreateSolidColorBrush(D2D1::ColorF(0x1677ff), borderBrush.GetAddressOf());
+    // 1px 半透明内阴影，叠在蓝色边框内侧
+    d2d->deviceContext->CreateSolidColorBrush(D2D1::ColorF(0x000000, 0.35f), innerShadowBrush.GetAddressOf());
     d2d->deviceContext->CreateSolidColorBrush(D2D1::ColorF(0x000000, 0.46f), brushTipBg.GetAddressOf());
     d2d->deviceContext->CreateSolidColorBrush(D2D1::ColorF(D2D1::ColorF::White), brushTipText.GetAddressOf());
     show();
@@ -307,10 +309,11 @@ void WinPin::layout()
 		shapeHover->paintDragger(ctx);
 	}
 	// 蓝边框和倍数提示属于窗口装饰，不跟着图缩放：变换收回来，按窗口坐标画。
-	// 边框也因此从"底图矩形"改成"窗口矩形"，任何倍数下都是 1*dpi 粗的半透明内阴影，
-	// 给贴屏窗口一个轻轮廓，便于在屏幕上区分
+	// 边框也因此从"底图矩形"改成"窗口矩形"，任何倍数下都是 2*dpi 粗；
+	// 蓝色边框内侧再叠一条 1px 半透明内阴影，给贴屏窗口轻轮廓，便于区分
 	ctx->SetTransform(D2D1::Matrix3x2F::Identity());
-	ctx->DrawRectangle(D2D1::RectF(0.f, 0.f, w, h), borderBrush.Get(), 1*dpi);
+	ctx->DrawRectangle(D2D1::RectF(0.f, 0.f, w, h), borderBrush.Get(), 2*dpi);
+	ctx->DrawRectangle(D2D1::RectF(1.5f*dpi, 1.5f*dpi, w - 1.5f*dpi, h - 1.5f*dpi), innerShadowBrush.Get(), 1*dpi);
 	paintScaleTip(ctx);
     canvas->finishPaint();
 }
