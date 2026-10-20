@@ -527,6 +527,11 @@ void WinCap::onUp(POINT pos, bool isRight)
         ensureAnnotation();
         layoutTools();
         refresh();  // 收掉放大镜
+        // 刚建的 ToolMain/ToolSub 是顶层窗口，可能抢走焦点；立刻把焦点夺回 WinCap，
+        // 否则框选完马上按 Esc 会被吞掉（焦点落在别的窗口上）。移动一下鼠标时系统可能
+        // 把焦点还回来，所以表现为"动一下就又能退出了"
+        SetForegroundWindow(hwnd);
+        SetFocus(hwnd);
         // 进入 Adjust 后：选区四周（四边 + 四角）可拖改大小；选区内选中工具 = 画标注，
         // 没选工具 = 拖动移动选区；Enter / 双击 / 工具条按钮确认收尾
     }
