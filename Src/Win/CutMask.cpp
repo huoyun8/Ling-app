@@ -2,7 +2,6 @@
 #include <dwmapi.h>
 #include <include/Ling.h>
 #include "CutMask.h"
-#include "../Util.h"
 using namespace Microsoft::WRL;
 
 CutMask::CutMask(Ling::WinBase* win) :win{ win }

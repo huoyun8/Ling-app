@@ -11,7 +11,6 @@
 #include "../Shape/ShapeText.h"
 #include "../App.h"
 #include "../Util.h"
-#include "../Lang.h"
 #include "../Update.h"
 using namespace Microsoft::WRL;
 

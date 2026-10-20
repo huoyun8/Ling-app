@@ -5,7 +5,6 @@
 #include <fstream>
 #include "Util.h"
 #include "Lang.h"
-#include "Setting.h"
 
 using Microsoft::WRL::ComPtr;
 

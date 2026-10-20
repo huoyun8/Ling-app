@@ -1,6 +1,5 @@
 #include "pch.h"
 #include "App.h"
-#include "Util.h"
 #include "History.h"
 #include "Win/WinHost.h"
 #include "Tool/ToolMain.h"
