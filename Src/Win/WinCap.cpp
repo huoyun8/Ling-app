@@ -405,7 +405,7 @@ void WinCap::onDown(POINT pos, bool isRight)
         }
         if (stage == CapStage::Adjust) {
             // 编辑状态右键 = 选中编辑：点中某个已有标注就解锁它（越过"只编辑最后一个"），
-            // 让它可被直接拖动 / 修改；右键点空白处才回到重新选区
+            // 让它可被直接拖动 / 修改
             auto imgPos = toImgPos(pos);
             for (int i{ (int)history->shapes.size() - 1 }; i >= 0; i--) {
                 auto cur = history->shapes[i].get();
@@ -418,7 +418,10 @@ void WinCap::onDown(POINT pos, bool isRight)
                     return;
                 }
             }
-            // 空白处：收掉正在进行的标注（画到一半的形状 / 编辑中的文字 / 工具条），
+            // 右键点空白：只有还没画过任何标注时才允许回到重新选区；
+            // 一旦画了圆 / 矩形等标注，选框就已结束，后续都是编辑器的活，禁止二次选框
+            if (!history->shapes.empty()) return;
+            // 空白处且没画过标注：收掉正在进行的标注（画到一半的形状 / 编辑中的文字 / 工具条），
             // 重置选区回到 Select 重新框选，并清掉右键解锁目标
             editTarget = nullptr;
             if (editingText && textBox) {

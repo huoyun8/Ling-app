@@ -50,14 +50,13 @@ void CutMask::initWinRect()
 	winRect.clear();
 	// 只认外部窗口：本程序自己的截图窗 / 工具条 / 贴屏窗都是置顶全屏或悬浮，不参与识别，
 	// 否则光标一动就会先被"自己的全屏矩形"匹配到，智能识别永远吸不到桌面上别的窗口
-	const DWORD selfPid = GetCurrentProcessId();
-	EnumWindows([selfPid](HWND hwnd, LPARAM lparam)
+	EnumWindows([](HWND hwnd, LPARAM lparam)
 		{
 			if (!hwnd) return TRUE;
 			if (!IsWindowVisible(hwnd)) return TRUE;
 			DWORD wpid = 0;
 			GetWindowThreadProcessId(hwnd, &wpid);
-			if (wpid == selfPid) return TRUE;
+			if (wpid == GetCurrentProcessId()) return TRUE;
 			BOOL cloaked = FALSE;
 			DwmGetWindowAttribute(hwnd, DWMWA_CLOAKED, &cloaked, sizeof(cloaked));
 			if (cloaked) return TRUE;
@@ -143,17 +142,20 @@ void CutMask::startMakeRect(POINT pos)
 
 void CutMask::makeRect(POINT pos)
 {
-	auto [left, right] = std::minmax(pressPos.x, pos.x);
-	auto [top, bottom] = std::minmax(pressPos.y, pos.y);
+	// 用普通 LONG 局部变量，不要 structured binding：std::minmax 绑定出来的是 const 引用不能赋值
+	LONG left = std::min(pressPos.x, pos.x);
+	LONG right = std::max(pressPos.x, pos.x);
+	LONG top = std::min(pressPos.y, pos.y);
+	LONG bottom = std::max(pressPos.y, pos.y);
 	// 拖动框选时的智能吸附：每条边就近吸附到识别表里的窗口 / 控件边界（阈值内），
 	// 这样拉出来的选区会自然贴齐窗口或按钮的边
 	const float th = snapThreshold * win->dpi;
-	left = (int)snapCoord((float)left, th);
-	right = (int)snapCoord((float)right, th);
-	top = (int)snapCoord((float)top, th);
-	bottom = (int)snapCoord((float)bottom, th);
-	if (right - left < minSize) right = left + (int)minSize;
-	if (bottom - top < minSize) bottom = top + (int)minSize;
+	left = (LONG)snapCoord((float)left, th);
+	right = (LONG)snapCoord((float)right, th);
+	top = (LONG)snapCoord((float)top, th);
+	bottom = (LONG)snapCoord((float)bottom, th);
+	if (right - left < (LONG)minSize) right = left + (LONG)minSize;
+	if (bottom - top < (LONG)minSize) bottom = top + (LONG)minSize;
 	maskRect.left = (float)left;
 	maskRect.right = (float)right;
 	maskRect.top = (float)top;
