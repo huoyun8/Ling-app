@@ -47,6 +47,9 @@ WinCap::WinCap() : WinHost()
     onMouseWheel.add([this](POINT pos, float space) { this->onWheel(pos, space); });
     onTimer.add([this](UINT id) { this->onTimerCB(id); });
     onDestroy.add([this]() { this->onClosed(); });
+    // WinCap 是铺满桌面的顶层窗口，工具条叠在选区内。一旦 WinCap 被点击获焦，
+    // 它会被顶到所有 TOPMOST 窗口之上、盖住工具条，所以获焦时把工具条重新置顶
+    onFocus.add([this]() { this->raiseTools(); });
     // DPI 变了（用户改了缩放比例）：系统会按新旧缩放比把窗口整体缩放一圈，但本窗口是铺满整个
     // 虚拟桌面的，缩放之后就盖不住桌面了，而且底图、选区（cutMask->maskRect）用的都是物理像素，
     // 窗口一变形它们全部错位，挂在选区上的工具条自然也跟着偏。改缩放不会改分辨率，
@@ -739,6 +742,16 @@ void WinCap::onTimerCB(UINT id)
         refresh();
         killTimer(100);
     }
+}
+
+// WinCap 获焦时被顶到最前、盖住工具条；这里把它们再拎回 TOPMOST 最上面。
+// 用 SWP_NOACTIVATE：只调层叠不抢焦点，键盘焦点仍留在 WinCap 上
+void WinCap::raiseTools()
+{
+    if (toolMain && toolMain->hwnd && IsWindowVisible(toolMain->hwnd))
+        SetWindowPos(toolMain->hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+    if (toolSub && toolSub->hwnd && IsWindowVisible(toolSub->hwnd))
+        SetWindowPos(toolSub->hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
 }
 
 // 把带标注的选区钉到桌面上：合成像素交给一个贴图窗口展示，自己关窗

@@ -48,6 +48,9 @@ private:
 	void onWheel(POINT pos, float space);
 	void onTimerCB(UINT id);
 	void onClosed();
+	// WinCap 满屏、工具条叠在选区内：WinCap 一旦获焦（被点击）会盖住工具条，
+	// 获焦后把它们重新置顶，让编辑器始终可见
+	void raiseTools();
 	// 命令行 --enter=pin 时框选完成直接进入标注界面（等于替用户按住 Ctrl）
 	bool enterByArg();
 	// 首次进入 Adjust 阶段时建出标注用的工具条与历史（懒建，避免截图窗口一开始就带着工具条）
