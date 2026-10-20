@@ -391,8 +391,6 @@ ComPtr<ID2D1Bitmap1> WinCap::getCutImg()
 
 LRESULT WinCap::onHitTest(const POINT pos)
 {
-    // 录屏阶段整窗让出鼠标：用户要能直接操作被录的那个应用
-    return HTCLIENT;
     return HTCLIENT;
 }
 
