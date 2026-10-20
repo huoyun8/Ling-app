@@ -109,6 +109,13 @@ bool CutMask::hasRect() const
 	return maskRect.right > maskRect.left && maskRect.bottom > maskRect.top;
 }
 
+void CutMask::reset()
+{
+	maskRect = D2D1::RectF(0.f, 0.f, 0.f, 0.f);
+	layout.Reset();   // 尺寸标签跟旧选区一起清掉，paint 里 layout 为空就直接不画
+	win->refresh();
+}
+
 MaskHit CutMask::hitTest(POINT pos) const
 {
 	if (!hasRect()) return MaskHit::None;

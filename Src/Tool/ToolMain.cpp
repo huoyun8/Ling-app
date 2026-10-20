@@ -111,7 +111,7 @@ void ToolMain::applyNormalStyle(Ling::Button* btn)
 }
 
 // 取消选中：与 onClick 选中某个按钮是对称操作，只是没有新的选中项。
-// ToolSub 由 curId 是否为空驱动，所以清空 curId 后 layoutTools() 会自动把它收起来。
+// 编辑器全程可见：取消选中只是回到"拖动选区"态，子编辑器由 WinHost 重排时继续显示（不收起）。
 void ToolMain::cancelSelect()
 {
 	if (curId.empty()) return;
@@ -122,8 +122,6 @@ void ToolMain::cancelSelect()
 		}
 	}
 	curId.clear();
-	win->toolSub->hideTools();
-	// curId 空了 ToolMain 要下移收回 ToolSub 让出的空间，交给 WinHost 重排整组
 	win->layoutTools();
 }
 

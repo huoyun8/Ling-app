@@ -23,6 +23,8 @@ public:
 	void adjust(POINT pos);
 	// 宽高都大于 0 才算真的框出了东西
 	bool hasRect() const;
+	// 清空当前选区与尺寸标签，回到还没框选的状态（选择区域过程中点右键 = 重新选择）
+	void reset();
 	void paint(ID2D1DeviceContext* ctx);
 public:
 	D2D1_RECT_F maskRect{};

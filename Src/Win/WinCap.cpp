@@ -393,6 +393,13 @@ LRESULT WinCap::onHitTest(const POINT pos)
 void WinCap::onDown(POINT pos, bool isRight)
 {
     if (isRight) {
+        // 选择区域过程中（Select）点右键：不退出截图，而是清掉当前选区重新选择；
+        // 进入标注（Adjust）后右键才退出
+        if (stage == CapStage::Select) {
+            isPress = false;
+            cutMask->reset();
+            return;
+        }
         close();
         return;
     }
@@ -683,12 +690,10 @@ void WinCap::layoutTools()
         auto [sx, sy, sw, sh] = App::get()->getScreenArea();
         wa = RECT{ sx, sy, sx + sw, sy + sh };
     }
-    if (!toolMain->curId.empty() && toolSub->hasContent()) {
-        toolSub->updatePosition(wa);
-    }
-    else {
-        toolSub->hideTools();
-    }
+    // 编辑器从头到尾都在：不管有没有选中工具，子编辑器都显示（没选中就展示默认内容），
+    // 只有关闭 / 保存 / 贴图 / 复制（结束这次截图）时窗口关闭才会一起消失
+    if (!toolSub->hasContent()) toolSub->showRectTools();
+    toolSub->updatePosition(wa);
 }
 
 void WinCap::onToolStyleChanged()
