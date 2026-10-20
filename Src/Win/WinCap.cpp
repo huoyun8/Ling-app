@@ -468,17 +468,21 @@ void WinCap::onMove(POINT pos)
             refresh();
         }
         else if (toolMain && !toolMain->curId.empty()) {
-            // 没按下：选中了工具就做悬停判定，命中已有 shape 时给夹点/重画
+            // 没按下：选中了工具就做悬停判定。只可编辑最后一个：只有最新那个 shape 的
+            // 夹点能悬停/编辑，之前的全部锁定；想改前面的必须先回退（Ctrl+Z 撤销到它）
             auto imgPos = toImgPos(pos);
-            int i{ (int)(history->shapes.size() - 1) };
-            for (; i >= 0; i--)
-            {
+            ShapeBase* last = nullptr;
+            for (int i{ (int)(history->shapes.size() - 1) }; i >= 0; i--) {
                 auto cur = history->shapes[i].get();
                 if (cur->isUndo) continue;
-                cur->mouseMove((float)imgPos.x, (float)imgPos.y);
-                if (cur->hoverDraggerIndex >= 0) {
-                    if (shapeHover != cur) {
-                        shapeHover = cur;
+                last = cur;
+                break;
+            }
+            if (last) {
+                last->mouseMove((float)imgPos.x, (float)imgPos.y);
+                if (last->hoverDraggerIndex >= 0) {
+                    if (shapeHover != last) {
+                        shapeHover = last;
                         setTimer(800, 100);
                         refresh();
                     }

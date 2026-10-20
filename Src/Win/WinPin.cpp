@@ -413,15 +413,20 @@ void WinPin::onMove(POINT pos)
 	else
 	{
 		if (toolMain->curId == L"") return;
-		int i{ (int)(history->shapes.size() - 1) };
-		for (; i >= 0; i--)
-		{
+		// 只可编辑最后一个：只有最新那个 shape 的夹点能悬停/编辑，之前的全部锁定。
+		// 想改前面的必须先回退（Ctrl+Z 撤销到它，它变回最新），改完再 Ctrl+Y 继续。
+		ShapeBase* last = nullptr;
+		for (int i{ (int)(history->shapes.size() - 1) }; i >= 0; i--) {
 			auto cur = history->shapes[i].get();
 			if (cur->isUndo) continue;
-			cur->mouseMove((float)imgPos.x, (float)imgPos.y);
-			if (cur->hoverDraggerIndex >= 0) {
-				if (shapeHover != cur) {
-					shapeHover = cur;
+			last = cur;
+			break;
+		}
+		if (last) {
+			last->mouseMove((float)imgPos.x, (float)imgPos.y);
+			if (last->hoverDraggerIndex >= 0) {
+				if (shapeHover != last) {
+					shapeHover = last;
 					setTimer(800, 100);
 					refresh();
 				}
