@@ -84,6 +84,9 @@ void History::undo()
             if (cur == win->shapeHover) {
                 win->shapeHover = nullptr;
             }
+            if (cur == win->editTarget) {
+                win->editTarget = nullptr;
+            }
             win->refresh();
             break;
         }
@@ -123,6 +126,7 @@ void History::removeShape(ShapeBase* target)
     for (auto it = shapes.begin(); it != shapes.end(); ++it) {
         if (it->get() == target) {
             if (win->shapeHover == target) win->shapeHover = nullptr;
+            if (win->editTarget == target) win->editTarget = nullptr;
             shapes.erase(it);
             win->refresh();
             return;

@@ -39,6 +39,9 @@ public:
 	std::unique_ptr<ToolMain> toolMain;
 	std::unique_ptr<ToolSub> toolSub;
 	ShapeBase* shapeHover{ nullptr };
+	// 右键选中的编辑目标：默认只可编辑最后一个，右键点中某个更早的标注时把它解锁，
+	// onMove 会优先悬停它；右键点空白 / 新画一笔会把它重置回"只编辑最后一个"
+	ShapeBase* editTarget{ nullptr };
 	// 本次按下新建出来的 shape（不是拖已有元素）。抬手时只对它做"有没有画出东西"的判定
 	ShapeBase* newShape{ nullptr };
 	// 本次按下之后光标有没有真的移动过。判"按下马上弹起"只认这个

@@ -397,15 +397,30 @@ LRESULT WinCap::onHitTest(const POINT pos)
 void WinCap::onDown(POINT pos, bool isRight)
 {
     if (isRight) {
-        // 点右键统一回到重新选区：Select 阶段清掉当前选区即可；
-        // Adjust 阶段先把正在进行的标注（画到一半的形状 / 编辑中的文字 / 工具条）
-        // 收干净，再重置选区、回到 Select 重新框，而不是关闭截图
+        // Select 阶段点右键：清掉当前选区重新选择
         if (stage == CapStage::Select) {
             isPress = false;
             cutMask->reset();
             return;
         }
         if (stage == CapStage::Adjust) {
+            // 编辑状态右键 = 选中编辑：点中某个已有标注就解锁它（越过"只编辑最后一个"），
+            // 让它可被直接拖动 / 修改；右键点空白处才回到重新选区
+            auto imgPos = toImgPos(pos);
+            for (int i{ (int)history->shapes.size() - 1 }; i >= 0; i--) {
+                auto cur = history->shapes[i].get();
+                if (cur->isUndo) continue;
+                cur->mouseMove((float)imgPos.x, (float)imgPos.y);
+                if (cur->hoverDraggerIndex >= 0) {
+                    editTarget = cur;
+                    shapeHover = cur;
+                    refresh();
+                    return;
+                }
+            }
+            // 空白处：收掉正在进行的标注（画到一半的形状 / 编辑中的文字 / 工具条），
+            // 重置选区回到 Select 重新框选，并清掉右键解锁目标
+            editTarget = nullptr;
             if (editingText && textBox) {
                 textBox->hide();
                 editingText = nullptr;
@@ -459,6 +474,7 @@ void WinCap::onDown(POINT pos, bool isRight)
                 shapeHover->mouseDown((float)imgPos.x, (float)imgPos.y);
             }
             else {
+                editTarget = nullptr;  // 新画一笔，回到"只可编辑最后一个"
                 shapeHover = history->createShape(toolMain->curId, imgPos.x, imgPos.y);
                 newShape = shapeHover;
             }
@@ -504,26 +520,35 @@ void WinCap::onMove(POINT pos)
             layoutTools();
         }
         else if (toolMain && !toolMain->curId.empty()) {
-            // 没按下：选中了工具就做悬停判定。只可编辑最后一个：只有最新那个 shape 的
-            // 夹点能悬停/编辑，之前的全部锁定；想改前面的必须先回退（Ctrl+Z 撤销到它）
+            // 没按下：选中了工具就做悬停判定。默认只可编辑最后一个（只有最新那个 shape 的
+            // 夹点能悬停/编辑，之前的全部锁定；想改前面的必须先回退 Ctrl+Z 撤销到它）；
+            // 若右键解锁了某个更早的标注（editTarget），则它也能被悬停 / 编辑
             auto imgPos = toImgPos(pos);
-            ShapeBase* last = nullptr;
-            for (int i{ (int)(history->shapes.size() - 1) }; i >= 0; i--) {
-                auto cur = history->shapes[i].get();
-                if (cur->isUndo) continue;
-                last = cur;
-                break;
+            ShapeBase* hover = nullptr;
+            if (editTarget && !editTarget->isUndo) {
+                editTarget->mouseMove((float)imgPos.x, (float)imgPos.y);
+                if (editTarget->hoverDraggerIndex >= 0) hover = editTarget;
             }
-            if (last) {
-                last->mouseMove((float)imgPos.x, (float)imgPos.y);
-                if (last->hoverDraggerIndex >= 0) {
-                    if (shapeHover != last) {
-                        shapeHover = last;
-                        setTimer(800, 100);
-                        refresh();
-                    }
-                    return;
+            if (!hover) {
+                ShapeBase* last = nullptr;
+                for (int i{ (int)(history->shapes.size() - 1) }; i >= 0; i--) {
+                    auto cur = history->shapes[i].get();
+                    if (cur->isUndo) continue;
+                    last = cur;
+                    break;
                 }
+                if (last) {
+                    last->mouseMove((float)imgPos.x, (float)imgPos.y);
+                    if (last->hoverDraggerIndex >= 0) hover = last;
+                }
+            }
+            if (hover) {
+                if (shapeHover != hover) {
+                    shapeHover = hover;
+                    setTimer(800, 100);
+                    refresh();
+                }
+                return;
             }
             if (shapeHover) shapeHover = nullptr;
         }
