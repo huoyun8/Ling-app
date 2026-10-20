@@ -397,11 +397,34 @@ LRESULT WinCap::onHitTest(const POINT pos)
 void WinCap::onDown(POINT pos, bool isRight)
 {
     if (isRight) {
-        // 选择区域过程中（Select）点右键：不退出截图，而是清掉当前选区重新选择；
-        // 进入标注（Adjust）后右键才退出
+        // 点右键统一回到重新选区：Select 阶段清掉当前选区即可；
+        // Adjust 阶段先把正在进行的标注（画到一半的形状 / 编辑中的文字 / 工具条）
+        // 收干净，再重置选区、回到 Select 重新框，而不是关闭截图
         if (stage == CapStage::Select) {
             isPress = false;
             cutMask->reset();
+            return;
+        }
+        if (stage == CapStage::Adjust) {
+            if (editingText && textBox) {
+                textBox->hide();
+                editingText = nullptr;
+            }
+            if (isMouseDown) {
+                isMouseDown = false;
+                ReleaseCapture();
+                if (newShape) {
+                    history->removeShape(newShape);  // 丢掉这次按下画到一半的新形状
+                }
+            }
+            newShape = nullptr;
+            shapeHover = nullptr;
+            hasDragged = false;
+            if (toolMain) toolMain->hide();
+            if (toolSub) toolSub->hideTools();
+            cutMask->reset();
+            stage = CapStage::Select;
+            refresh();
             return;
         }
         close();
