@@ -21,7 +21,7 @@ namespace {
 		{ L"rect",    { L"width",     1.f, 26.f,  2.f } },
 		{ L"ellipse", { L"width",     1.f, 26.f,  2.f } },
 		{ L"arrow",   { L"width",     1.f, 16.f,  3.f } },
-		{ L"number",  { L"radius",    6.f, 86.f, 16.f } },
+		{ L"number",  { L"radius",    6.f, 86.f, 9.f } },
 		{ L"line",    { L"width",     1.f, 60.f, 12.f } },
 		{ L"text",    { L"fontSize", 10.f, 60.f, 20.f } },
 		{ L"mosaic",  { L"width",    18.f, 68.f, 28.f } },

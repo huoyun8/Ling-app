@@ -777,7 +777,7 @@ bool WinCap::getImagePixels(std::vector<BYTE>& pixels, D2D1_SIZE_U& size)
     ctx->BeginDraw();
     ctx->Clear(D2D1::ColorF(0, 0.0f));
     // 底图：只取选区那块（srcRect），画满整张导出图
-    auto srcRect = D2D1::RectU((UINT32)m.left, (UINT32)m.top, (UINT32)m.right, (UINT32)m.bottom);
+    auto srcRect = D2D1::RectF((float)m.left, (float)m.top, (float)m.right, (float)m.bottom);
     ctx->DrawBitmap(screenImg.Get(), D2D1::RectF(0, 0, (float)cutW, (float)cutH), 1.0f,
         D2D1_BITMAP_INTERPOLATION_MODE_NEAREST_NEIGHBOR, &srcRect);
     // shape 用窗口坐标，平移到选区左上角后画进导出图
