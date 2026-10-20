@@ -106,6 +106,10 @@ void WinCap::onCreated()
     getPixImg(pos);
     setPixPos(pos);
     show();
+    // show() 只显示不激活，而截图窗口要立刻响应键盘（Select 阶段按 Esc 退出、方向键移光标）。
+    // 全局热键触发时本进程有权抢前台，主动拿到焦点，否则没点过窗口时 Esc 会失效
+    SetForegroundWindow(hwnd);
+    SetFocus(hwnd);
 }
 
 void WinCap::layout()
@@ -473,9 +477,11 @@ void WinCap::onMove(POINT pos)
             refresh();
         }
         else if (isPress) {
-            // 正在调选区：四边/角改大小，没选工具时内部拖动 = 移动选区
+            // 正在调选区：四边/角改大小，没选工具时内部拖动 = 移动选区。
+            // 选区一变，编辑器也要跟着走，所以重排工具条
             cutMask->adjust(pos);
             refresh();
+            layoutTools();
         }
         else if (toolMain && !toolMain->curId.empty()) {
             // 没按下：选中了工具就做悬停判定。只可编辑最后一个：只有最新那个 shape 的
@@ -693,10 +699,14 @@ void WinCap::layoutTools()
         auto [sx, sy, sw, sh] = App::get()->getScreenArea();
         wa = RECT{ sx, sy, sx + sw, sy + sh };
     }
-    // 编辑器从头到尾都在：不管有没有选中工具，子编辑器都显示（没选中就展示默认内容），
-    // 只有关闭 / 保存 / 贴图 / 复制（结束这次截图）时窗口关闭才会一起消失
-    if (!toolSub->hasContent()) toolSub->showRectTools();
-    toolSub->updatePosition(wa);
+    // 主编辑器（ToolMain）始终可见；副编辑器（ToolSub）只在选中了对应工具时才出现，
+    // 没选中就收起。选区移动 / 缩放时这里被重新调用来让整组编辑器跟着选区走
+    if (!toolMain->curId.empty() && toolSub->hasContent()) {
+        toolSub->updatePosition(wa);
+    }
+    else {
+        toolSub->hideTools();
+    }
 }
 
 void WinCap::onToolStyleChanged()
