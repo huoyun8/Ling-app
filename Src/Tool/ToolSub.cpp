@@ -251,9 +251,14 @@ void ToolSub::showMosaicTools()
 	// 两个开关按钮：高斯模糊（字体菱形 e693，选中=开）+ 形状（实心矩形=画框/实心圆=手绘）；initSize 按 2 个按钮排
 	beginTool(L"mosaic");
 	initSize(2, false, true);
-	makeToggleBtn(L"\ue694", L"\ue693", &isMosaicBlur, L"tool.mosaicBlur", L"blur");
-	// 形状：开=画框(实心矩形)，关=手绘(实心圆)
+	// 形状：开=画框(实心矩形)，关=手绘(实心圆) —— 放前面
 	makeToggleBtn(L"\ue602", L"\ue600", &isMosaicRect, L"tool.rectFill", L"rect");
+	// 分隔条：形状 与 高斯模糊 之间
+	auto sep = contentNode->makeChild<Ling::Node>();
+	sep->setSize(dpi, 18.f);
+	sep->setBg(0xDDDDDDff);
+	// 高斯模糊：选中=实心菱形 e694 开，未选中=空心菱形 e693 关 —— 放后面
+	makeToggleBtn(L"\ue694", L"\ue693", &isMosaicBlur, L"tool.mosaicBlur", L"blur");
 	initSlider();
 }
 
