@@ -8,6 +8,9 @@ public:
 	~ShapeMosaic();
 	void paint(ID2D1DeviceContext* ctx) override;
 	void paintDragger(ID2D1DeviceContext* ctx) override;
+	void paintHoverFrame(ID2D1DeviceContext* ctx) override;
+	// 滑动条变化时按当前强度重建（实时显现），供 WinCap::onToolStyleChanged 调用
+	void rebuildLive();
 	void mouseDrag(const float x, const float y) override;
 	void mouseDown(const float x, const float y) override;
 	void mouseUp(const float x, const float y) override;

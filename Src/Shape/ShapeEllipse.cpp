@@ -274,3 +274,8 @@ void ShapeEllipse::setCursor()
 		SetCursor(LoadCursor(nullptr, IDC_SIZEALL));
 	}
 }
+
+void ShapeEllipse::paintHoverFrame(ID2D1DeviceContext* ctx)
+{
+	drawHoverFrame(ctx, draggersBounds(draggers));
+}

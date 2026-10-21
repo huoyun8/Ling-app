@@ -385,3 +385,8 @@ void ShapeEraser::hitTest(const D2D1_POINT_2F& mousePos)
 		hoverDraggerIndex = 8;
 	}
 }
+
+void ShapeEraser::paintHoverFrame(ID2D1DeviceContext* ctx)
+{
+	drawHoverFrame(ctx, draggersBounds(draggers));
+}

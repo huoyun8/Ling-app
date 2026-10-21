@@ -224,3 +224,8 @@ void ShapeNumber::makePath()
 	sink->EndFigure(D2D1_FIGURE_END_CLOSED);
 	sink->Close();
 }
+
+void ShapeNumber::paintHoverFrame(ID2D1DeviceContext* ctx)
+{
+	drawHoverFrame(ctx, draggersBounds(draggers));
+}

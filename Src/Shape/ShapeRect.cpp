@@ -256,3 +256,8 @@ void ShapeRect::setCursor()
 		SetCursor(LoadCursor(nullptr, IDC_SIZEALL));
 	}
 }
+
+void ShapeRect::paintHoverFrame(ID2D1DeviceContext* ctx)
+{
+	drawHoverFrame(ctx, draggersBounds(draggers));
+}

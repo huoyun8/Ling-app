@@ -197,3 +197,8 @@ void ShapeLine::hitTest(const D2D1_POINT_2F& mousePos)
 		hoverDraggerIndex = 8;
 	}
 }
+
+void ShapeLine::paintHoverFrame(ID2D1DeviceContext* ctx)
+{
+	drawHoverFrame(ctx, draggersBounds(draggers));
+}

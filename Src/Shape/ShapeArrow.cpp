@@ -204,3 +204,8 @@ void ShapeArrow::constrainToEightDirections(const float anchorX, const float anc
 		targetY = anchorY + (dy >= 0.f ? span : -span);
 	}
 }
+
+void ShapeArrow::paintHoverFrame(ID2D1DeviceContext* ctx)
+{
+	drawHoverFrame(ctx, draggersBounds(draggers));
+}

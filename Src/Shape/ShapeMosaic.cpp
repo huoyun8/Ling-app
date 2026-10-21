@@ -220,6 +220,15 @@ void ShapeMosaic::mouseUp(const float x, const float y)
 	buildMosaicBitmap();
 }
 
+// 滑动条变化时按当前强度重建：取最新滑块值，重新读回并模糊/色块，让最后一个立即显现
+void ShapeMosaic::rebuildLive()
+{
+	if (!isBlur) return;
+	strokeWidth = win->toolSub->getSliderVal();
+	buildMosaicBitmap();
+	win->refresh();
+}
+
 void ShapeMosaic::mouseMove(const float x, const float y)
 {
 	hoverDraggerIndex = -1;
@@ -582,4 +591,9 @@ void ShapeMosaic::hitTest(const D2D1_POINT_2F& mousePos)
 	if (minDist <= outer && minDist >= inner) {
 		hoverDraggerIndex = 8;
 	}
+}
+
+void ShapeMosaic::paintHoverFrame(ID2D1DeviceContext* ctx)
+{
+	drawHoverFrame(ctx, draggersBounds(draggers));
 }

@@ -9,6 +9,7 @@
 #include "../History.h"
 #include "../Shape/ShapeBase.h"
 #include "../Shape/ShapeText.h"
+#include "../Shape/ShapeMosaic.h"
 #include "../App.h"
 #include "../Util.h"
 #include "../Update.h"
@@ -126,7 +127,11 @@ void WinCap::layout()
         {
             if (!shape->isUndo) shape->paint(ctx);
         }
-        if (!isMouseDown && shapeHover) shapeHover->paintDragger(ctx);
+        // 悬停：2px 细线框；选中编辑（按下）时再叠加 8 个小方块
+        if (shapeHover) {
+            shapeHover->paintHoverFrame(ctx);
+            if (isMouseDown) shapeHover->paintDragger(ctx);
+        }
     }
     // 压暗层 + 选区边框 + 尺寸标签画在标注之上：橡皮擦恢复底图时只会擦掉标注，
     // 不会把框外的压暗边和选取边框一起擦掉
@@ -771,6 +776,15 @@ void WinCap::layoutTools()
 void WinCap::onToolStyleChanged()
 {
     if (editingText) editingText->applyStyle();
+    // 马赛克高斯模糊：滑动条一动，最后编辑的那个模糊形状立刻按新强度重建显现
+    if (history && !history->shapes.empty()) {
+        for (int i = (int)history->shapes.size() - 1; i >= 0; --i) {
+            auto s = history->shapes[i].get();
+            if (!s || s->isUndo) continue;
+            if (auto* m = dynamic_cast<ShapeMosaic*>(s)) m->rebuildLive();
+            return;
+        }
+    }
 }
 
 Ling::TextBox* WinCap::getTextBox()
