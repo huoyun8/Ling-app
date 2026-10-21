@@ -120,7 +120,6 @@ void WinCap::layout()
     ctx->Clear(0);
     D2D1_RECT_F destRect = D2D1::RectF(0, 0, (float)w, (float)h);
     ctx->DrawBitmap(screenImg.Get(), destRect);
-    cutMask->paint(ctx);
     // 标注：shape 一律用窗口坐标（本窗口铺满桌面、scale 恒为 1），直接画在选区之上
     if (history) {
         for (auto& shape : history->shapes)
@@ -129,6 +128,9 @@ void WinCap::layout()
         }
         if (!isMouseDown && shapeHover) shapeHover->paintDragger(ctx);
     }
+    // 压暗层 + 选区边框 + 尺寸标签画在标注之上：橡皮擦恢复底图时只会擦掉标注，
+    // 不会把框外的压暗边和选取边框一起擦掉
+    cutMask->paint(ctx);
     paintPix(ctx);
     canvas->finishPaint();
 }
