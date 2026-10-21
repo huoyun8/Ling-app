@@ -170,7 +170,7 @@ void ToolMain::drawPinIcon()
 	ctx->Clear(D2D1::ColorF(0, 0.0f));
 	auto d2d = Ling::D2D::get();
 	Microsoft::WRL::ComPtr<ID2D1SolidColorBrush> b;
-	ctx->CreateSolidColorBrush(D2D1::ColorF(0x333333FF), b.GetAddressOf());
+	ctx->CreateSolidColorBrush(D2D1::ColorF(0x333333FF), b.GetAddressOf());   // 实心图钉，颜色与撤销等图标一致
 	float cx = w / 2.f, cy = h / 2.f;
 	float s = std::min(w, h) * 0.30f;
 	float headR = s * 0.17f;
@@ -285,8 +285,8 @@ void ToolMain::onClick(Ling::Button* btn)
 		}
 		if (b->id == btn->id)
 		{
-			b->setBg(0xe6f4ffff);
-			b->setHoverBg(0xe6f4ffff);
+			b->setBg(0x8C3399FF);   // 选中的工具：明显的透明蓝，比原来的浅色更醒目
+			b->setHoverBg(0x8C3399FF);
 		}
 	}
 	curId = btn->id;
