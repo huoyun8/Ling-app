@@ -25,8 +25,8 @@ ShapeMosaic::ShapeMosaic(WinHost* win) :ShapeBase(win), draggers{
 	d2d->deviceContext->CreateSolidColorBrush(D2D1::ColorF(0xF00FF0, 0.38f), brush.GetAddressOf());
 	strokeWidth = toolSub->getSliderVal();
 	isBlur = toolSub->isMosaicBlur;
-	// 高斯模糊是整块矩形区域糊化，跟矩形几何走；开了模糊就强制用矩形，不再走涂抹笔画
-	isRect = toolSub->isMosaicRect || isBlur;
+	// 高斯模糊跟随形状开关：矩形=矩形糊化，圆形=随手画圆(涂抹笔画)糊化，与马赛克一致
+	isRect = toolSub->isMosaicRect;
 	// 圆头圆角描边。本项目没有 App::getRoundStrokeStyle 那样的全局缓存，
 	// 就每个 shape 自己持一个 —— StrokeStyle 是不可变的轻对象，代价可以忽略
 	d2d->d2dFactory->CreateStrokeStyle(

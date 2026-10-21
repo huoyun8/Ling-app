@@ -493,8 +493,8 @@ void WinCap::onDown(POINT pos, bool isRight)
         return;
     }
     if (stage == CapStage::Select) {
-        // 开始手动拖动框选区：恢复智能吸附（右键手动模式到此结束）
-        cutMask->autoSnap = true;
+        // 手动拖动框选区：沿用当前吸附开关 —— 右键进入手动十字后保持不吸附，
+        // 只有再次按快捷键首次进入时才恢复智能吸附
         isPress = true;
         cutMask->startMakeRect(pos);
     }

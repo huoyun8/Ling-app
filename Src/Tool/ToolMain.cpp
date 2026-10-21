@@ -86,8 +86,9 @@ void ToolMain::updateShapeIcon()
 			++bi;
 		}
 	};
-	setBtn(L"arrow",   win->toolSub->isArrowFill   ? L"\ue604" : L"\ue603");
-	setBtn(L"number",  win->toolSub->isNumberFill  ? L"\ue605" : L"\ue776");
+	// 主编辑器图标固定：箭头=实心(e604)、序号=空心(e776)，不随副编辑器填充切换（切换都在副编辑器）
+	setBtn(L"arrow",   L"\ue604");
+	setBtn(L"number",  L"\ue776");
 }
 
 void ToolMain::onCreated()
@@ -197,8 +198,8 @@ void ToolMain::onClick(Ling::Button* btn)
 		}
 		if (b->id == btn->id)
 		{
-			b->setBg(0x8C3399FF);   // 选中的工具：明显的透明蓝，比原来的浅色更醒目
-			b->setHoverBg(0x8C3399FF);
+			b->setBg(0xA6000000);   // 选中的工具：透明35%黑（35%透明=65%不透明黑）
+			b->setHoverBg(0xA6000000);
 		}
 	}
 	curId = btn->id;

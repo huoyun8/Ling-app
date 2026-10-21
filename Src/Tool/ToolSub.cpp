@@ -185,12 +185,12 @@ Ling::Button* ToolSub::makeShapeSelectBtn(bool value, const std::wstring& glyph,
 void ToolSub::syncShapeSelect()
 {
 	if (shapeRectBtn) {
-		shapeRectBtn->setBg(isEllipseShape ? 0 : 0x8C3399FF);
-		shapeRectBtn->setHoverBg(isEllipseShape ? 0xF2F2F2ff : 0x8C3399FF);
+		shapeRectBtn->setBg(isEllipseShape ? 0 : 0xA6000000);
+		shapeRectBtn->setHoverBg(isEllipseShape ? 0xF2F2F2ff : 0xA6000000);
 	}
 	if (shapeEllBtn) {
-		shapeEllBtn->setBg(isEllipseShape ? 0x8C3399FF : 0);
-		shapeEllBtn->setHoverBg(isEllipseShape ? 0x8C3399FF : 0xF2F2F2ff);
+		shapeEllBtn->setBg(isEllipseShape ? 0xA6000000 : 0);
+		shapeEllBtn->setHoverBg(isEllipseShape ? 0xA6000000 : 0xF2F2F2ff);
 	}
 	// 填充字形随形状变：切换形状后填充开关要跟着改成矩形/椭圆
 	updateFillIcon();
@@ -247,7 +247,7 @@ void ToolSub::showMosaicTools()
 	// 两个开关按钮：高斯模糊（字体菱形 e693，选中=开）+ 形状（实心矩形=画框/实心圆=手绘）；initSize 按 2 个按钮排
 	beginTool(L"mosaic");
 	initSize(2, false, true);
-	makeToggleBtn(L"\ue693", L"\ue693", &isMosaicBlur, L"tool.mosaicBlur", L"blur");
+	makeToggleBtn(L"\ue694", L"\ue693", &isMosaicBlur, L"tool.mosaicBlur", L"blur");
 	// 形状：开=画框(实心矩形)，关=手绘(实心圆)
 	makeToggleBtn(L"\ue602", L"\ue600", &isMosaicRect, L"tool.rectFill", L"rect");
 	initSlider();
@@ -395,8 +395,8 @@ void ToolSub::applyToggleStyle(Ling::Button* btn, bool selected)
 {
 	if (selected) {
 		// 选中态 hover 色与常态一致，避免鼠标移上去时选中效果被 hover 覆盖掉
-		btn->setBg(0x8C3399FF);
-		btn->setHoverBg(0x8C3399FF);
+		btn->setBg(0xA6000000);
+		btn->setHoverBg(0xA6000000);
 	}
 	else {
 		btn->setBg(0);

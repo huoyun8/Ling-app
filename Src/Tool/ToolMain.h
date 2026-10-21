@@ -32,7 +32,7 @@ private:
 	static constexpr float spliterW{ 1.f };
 	std::vector<std::wstring> btnIds = { L"rect",L"arrow",L"number",L"line",L"text",L"mosaic", L"eraser",L"|",L"undo",L"redo",L"|",L"close",L"pin",L"save",L"clipboard" };
 	// rect=矩形+椭圆交叠(合并主图标) e691，pin=实心图钉 e690，mosaic=正方形马赛克 e692；全部来自 iconfont 字形
-	std::vector<std::wstring> btnCodes = { L"\ue691",L"\ue603",L"\ue776",L"\ue601",L"\ue6ec",L"\ue692",L"\ue6be",L"|",L"\ued85",L"\ued8a",L"|",L"\ue62d",L"\ue690",L"\ue608",L"\ue6ad" };
+	std::vector<std::wstring> btnCodes = { L"\ue691",L"\ue604",L"\ue776",L"\ue601",L"\ue6ec",L"\ue692",L"\ue6be",L"|",L"\ued85",L"\ued8a",L"|",L"\ue62d",L"\ue690",L"\ue608",L"\ue6ad" };
 	std::vector<Ling::Button*> btns;
 	// 悬停提示。要 hwnd，所以在 onCreated 里才建得起来
 	std::unique_ptr<Tip> tip;
