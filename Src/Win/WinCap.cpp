@@ -743,6 +743,7 @@ void WinCap::layoutTools()
 {
     if (!toolMain || !toolSub) return;
     if (!cutMask->hasRect()) return;
+    toolMain->show();   // 右键重选区后主编辑器被隐藏；重新框选进入 Adjust 时要再显示出来
     layoutTool(toolMain.get());
     RECT maskScr{ (int)(x + cutMask->maskRect.left), (int)(y + cutMask->maskRect.top),
                   (int)(x + cutMask->maskRect.right), (int)(y + cutMask->maskRect.bottom) };
