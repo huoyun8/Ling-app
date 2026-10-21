@@ -27,6 +27,8 @@ private:
 	void drawPinIcon();
 	// 把"空心矩形+空心椭圆交叠"图形画到 rectIconCanvas 上（矩形/椭圆合并后的主图标）
 	void drawRectCompoundIcon();
+	// 把正方形马赛克图标画到 mosaicIconCanvas 上（iconfont 马赛克字形偏长方形）
+	void drawMosaicIcon();
 private:
 	WinHost* win;
 	// onDpiChanged 与 onSizeChanged 之间的接力标记，见构造函数里的注释
@@ -43,5 +45,7 @@ private:
 	Ling::Canvas* pinCanvas{ nullptr };
 	// 矩形按钮的自绘画布：矩形/椭圆已合并，主图标画"空心矩形+空心椭圆交叠"图形
 	Ling::Canvas* rectIconCanvas{ nullptr };
+	// 马赛克按钮的自绘画布：iconfont 的马赛克字形偏长方形，改为自绘正方形样式
+	Ling::Canvas* mosaicIconCanvas{ nullptr };
 };
 

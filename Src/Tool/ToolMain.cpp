@@ -31,6 +31,7 @@ ToolMain::ToolMain(WinHost* win) : Ling::WinBase(), win(win)
 		// 自绘图标：DPI 变化后尺寸才就绪，顺手补绘一次
 		if (pinCanvas) drawPinIcon();
 		if (rectIconCanvas) drawRectCompoundIcon();
+		if (mosaicIconCanvas) drawMosaicIcon();
 	});
 	createNativeWindow(WS_EX_TOPMOST | WS_EX_TOOLWINDOW, WS_POPUP);
 }
@@ -152,11 +153,24 @@ void ToolMain::onCreated()
 		rectIconCanvas = cv;
 		break;
 	}
+	// 马赛克按钮：iconfont 马赛克字形偏长方形，改为自绘正方形马赛克图标
+	for (auto b : btns) {
+		if (b->id != L"mosaic") continue;
+		b->setText(L"");
+		auto cv = b->makeChild<Ling::Canvas>();
+		cv->setPositionType(Ling::Position::Absolute);
+		cv->setPosition(Ling::Edge::Left, 0.f);
+		cv->setPosition(Ling::Edge::Top, 0.f);
+		cv->setSizePercent(100.f, 100.f);
+		mosaicIconCanvas = cv;
+		break;
+	}
 	// 初始图标按填充状态摆对（箭头/序号默认实心）
 	updateShapeIcon();
 	// 自绘图标：尺寸可能还没就绪，先画一次，后续 onSizeChanged 会补绘
 	if (pinCanvas) drawPinIcon();
 	if (rectIconCanvas) drawRectCompoundIcon();
+	if (mosaicIconCanvas) drawMosaicIcon();
 	show();
 }
 
@@ -216,6 +230,33 @@ void ToolMain::drawRectCompoundIcon()
 	D2D1_ELLIPSE el{ D2D1::Point2F(cx + s * 0.40f, cy), s * 0.50f, s * 0.68f };
 	ctx->DrawEllipse(el, b.Get(), 1.5f);
 	rectIconCanvas->finishPaint();
+}
+
+// 正方形马赛克图标：2x2 小方格网格，整体是正方形，风格与其他图标一致(0x333333)
+void ToolMain::drawMosaicIcon()
+{
+	if (!mosaicIconCanvas) return;
+	auto ctx = mosaicIconCanvas->startPaint();
+	if (!ctx) return;
+	float w = mosaicIconCanvas->w, h = mosaicIconCanvas->h;
+	if (w <= 0.f || h <= 0.f) return;
+	ctx->Clear(D2D1::ColorF(0, 0.0f));
+	Microsoft::WRL::ComPtr<ID2D1SolidColorBrush> b;
+	ctx->CreateSolidColorBrush(D2D1::ColorF(0x333333FF), b.GetAddressOf());
+	float cx = w / 2.f, cy = h / 2.f;
+	float s = std::min(w, h) * 0.34f;   // 正方形外框边长（居中）
+	// 2x2 网格：每个小格一条缝隙隔开，画四个实心小方块
+	float gap = s * 0.16f;
+	float cell = (s - gap) / 2.f;
+	float left = cx - s / 2.f, top = cy - s / 2.f;
+	D2D1_RECT_F cells[4] = {
+		{ left,               top,                left + cell,          top + cell },
+		{ left + cell + gap,  top,                left + s,             top + cell },
+		{ left,               top + cell + gap,   left + cell,          top + s },
+		{ left + cell + gap,  top + cell + gap,   left + s,             top + s },
+	};
+	for (auto& rc : cells) ctx->FillRectangle(rc, b.Get());
+	mosaicIconCanvas->finishPaint();
 }
 
 void ToolMain::applyNormalStyle(Ling::Button* btn)
