@@ -138,7 +138,7 @@ void ToolSub::showRectTools()
 	fillBtn->setHeight(btnSize - 2.5);
 	fillBtn->setFlexGrow(1.f);
 	fillBtn->setFontFamily(L"icon");
-	fillBtn->setFontSize(14.3f);
+	fillBtn->setFontSize(15.f);
 	tip->bind(fillBtn, Lang::get(L"tool.rectFill"));
 	fillBtn->onClick.add([this](Ling::Button*) {
 		isRectFill = !isRectFill;
@@ -172,7 +172,7 @@ Ling::Button* ToolSub::makeShapeSelectBtn(bool value, const std::wstring& glyph,
 	btn->setHeight(btnSize - 2.5);
 	btn->setFlexGrow(1.f);
 	btn->setFontFamily(L"icon");
-	btn->setFontSize(14.3f);   // 形状单选图标字号：13 * 1.1
+	btn->setFontSize(15.f);   // 形状单选图标字号：13→15
 	tip->bind(btn, Lang::get(tipKey));
 	btn->onClick.add([this, value](Ling::Button* b) {
 		isEllipseShape = value;

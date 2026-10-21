@@ -113,7 +113,7 @@ void ToolMain::onCreated()
 			btn->setFlexGrow(1.f);
 			btn->setHoverBg(0xF2F2F2ff);
 			btn->setFontFamily(L"icon");
-			btn->setFontSize(14.3f);   // 图标字号：13 * 1.1，编辑条高度不变，图标放大
+			btn->setFontSize(15.f);   // 图标字号：13→15，编辑条高度不变，图标放大
 			btn->onClick.add([this](Ling::Button* btn) {onClick(btn);});
 			tip->bind(btn, Lang::get(std::format(L"tool.{}", id)));
 			btns.push_back(btn);

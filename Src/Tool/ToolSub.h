@@ -56,7 +56,7 @@ private:
 	// （fill / semiTransparent / bold / …，同一工具下不能重名）。
 	// onText/offText 是开关两种状态下分别显示的字形（开启用 onText，关闭用 offText）：
 	// 这样图标能随状态切换（实心=开、空心=关），而不只是选中变色。不需要区分时两者传同一字形。
-	Ling::Button* makeToggleBtn(const std::wstring& onText, const std::wstring& offText, bool* flag, const std::wstring& tipKey, const std::wstring& cfgKey, float fontSize = 14.3f);
+	Ling::Button* makeToggleBtn(const std::wstring& onText, const std::wstring& offText, bool* flag, const std::wstring& tipKey, const std::wstring& cfgKey, float fontSize = 15.f);
 	// 形状单选按钮（矩形工具里的"空心矩形/空心椭圆"）：点击把 isEllipseShape 设为 value，
 	// 并刷新两个形状按钮的选中配色与填充图标。value=false 选矩形，true 选椭圆。
 	Ling::Button* makeShapeSelectBtn(bool value, const std::wstring& glyph, const std::wstring& tipKey);
