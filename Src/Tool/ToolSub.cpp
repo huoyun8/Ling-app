@@ -38,27 +38,29 @@ namespace {
 	}
 
 	// ---------- 自绘开关图标（不依赖 iconfont 字形，线条/尺寸与其他图标保持一致） ----------
-	// 矩形：实心填充 / 空心描边
+	// 矩形：实心=全黑填充 / 空心=描边
 	void drawRectIcon(ID2D1DeviceContext* ctx, float w, float h, bool solid)
 	{
-		Microsoft::WRL::ComPtr<ID2D1SolidColorBrush> b;
-		ctx->CreateSolidColorBrush(D2D1::ColorF(0x333333FF), b.GetAddressOf());
+		Microsoft::WRL::ComPtr<ID2D1SolidColorBrush> fillB, strokeB;
+		ctx->CreateSolidColorBrush(D2D1::ColorF(0, 1.0f), fillB.GetAddressOf());       // 实心=全黑
+		ctx->CreateSolidColorBrush(D2D1::ColorF(0x333333FF), strokeB.GetAddressOf());  // 空心=描边
 		float cx = w / 2.f, cy = h / 2.f;
 		float s = std::min(w, h) * 0.56f;
 		D2D1_RECT_F rc{ cx - s / 2.f, cy - s / 2.f, cx + s / 2.f, cy + s / 2.f };
-		if (solid) ctx->FillRectangle(rc, b.Get());
-		else ctx->DrawRectangle(rc, b.Get(), 1.5f);
+		if (solid) ctx->FillRectangle(rc, fillB.Get());
+		else ctx->DrawRectangle(rc, strokeB.Get(), 1.5f);
 	}
-	// 椭圆：实心填充 / 空心描边
+	// 椭圆：实心=全黑填充 / 空心=描边
 	void drawEllipseIcon(ID2D1DeviceContext* ctx, float w, float h, bool solid)
 	{
-		Microsoft::WRL::ComPtr<ID2D1SolidColorBrush> b;
-		ctx->CreateSolidColorBrush(D2D1::ColorF(0x333333FF), b.GetAddressOf());
+		Microsoft::WRL::ComPtr<ID2D1SolidColorBrush> fillB, strokeB;
+		ctx->CreateSolidColorBrush(D2D1::ColorF(0, 1.0f), fillB.GetAddressOf());       // 实心=全黑
+		ctx->CreateSolidColorBrush(D2D1::ColorF(0x333333FF), strokeB.GetAddressOf());  // 空心=描边
 		float cx = w / 2.f, cy = h / 2.f;
 		float rx = std::min(w, h) * 0.32f;
 		D2D1_ELLIPSE el{ D2D1::Point2F(cx, cy), rx, rx };
-		if (solid) ctx->FillEllipse(el, b.Get());
-		else ctx->DrawEllipse(el, b.Get(), 1.5f);
+		if (solid) ctx->FillEllipse(el, fillB.Get());
+		else ctx->DrawEllipse(el, strokeB.Get(), 1.5f);
 	}
 }
 
