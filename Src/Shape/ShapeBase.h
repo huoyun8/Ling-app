@@ -18,8 +18,6 @@ public:
 	// 单击本身就是正常用法的元素（number 落徽章、text 进编辑）覆盖它返回 true
 	virtual bool isValidWithoutDrag() { return false; };
 	bool isInRect(const D2D1_RECT_F rect, const float x, const float y);
-	// 选中形状的控制点手柄：用细线十字标记（替代原先的实心小方块）
-	void paintDraggerMark(ID2D1DeviceContext* ctx, const D2D1_RECT_F& r);
 public:
 	WinHost* win;
 	bool isUndo;

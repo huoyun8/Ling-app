@@ -73,7 +73,7 @@ void ShapeEraser::paintDragger(ID2D1DeviceContext* ctx)
 	size_t count = isRect ? draggers.size() : 2;
 	for (size_t i = 0; i < count; ++i)
 	{
-		paintDraggerMark(ctx, draggers[i]);
+		ctx->DrawRectangle(draggers[i], brushDragger.Get(), 3.0f * win->dpi);
 	}
 }
 

@@ -40,7 +40,7 @@ void ShapeRect::paintDragger(ID2D1DeviceContext* ctx)
 {
 	for (auto& dragger:draggers)
 	{
-		paintDraggerMark(ctx, dragger);
+		ctx->DrawRectangle(dragger, brushDragger.Get(), 3.0f * win->dpi);
 	}
 }
 

@@ -73,7 +73,7 @@ void ShapeNumber::paintDragger(ID2D1DeviceContext* ctx)
 	if (isWheel) return;
 	for (auto& dragger:draggers)
 	{
-		paintDraggerMark(ctx, dragger);
+		ctx->DrawRectangle(dragger, brushDragger.Get(), 3.0f * win->dpi);
 	}
 }
 
