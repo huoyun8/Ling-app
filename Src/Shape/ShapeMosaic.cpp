@@ -1,4 +1,5 @@
 ﻿#include "pch.h"
+#include <d2d1effects.h>
 #include "Win/WinHost.h"
 #include "Tool/ToolMain.h"
 #include "Tool/ToolSub.h"
@@ -24,7 +25,9 @@ ShapeMosaic::ShapeMosaic(WinHost* win) :ShapeBase(win), draggers{
 	// 松开鼠标后 buildMosaicBitmap 会算出真正的马赛克画刷把它替换掉
 	d2d->deviceContext->CreateSolidColorBrush(D2D1::ColorF(0xF00FF0, 0.38f), brush.GetAddressOf());
 	strokeWidth = toolSub->getSliderVal();
-	isRect = toolSub->isMosaicRect;
+	isBlur = toolSub->isMosaicBlur;
+	// 高斯模糊是整块矩形区域糊化，跟矩形几何走；开了模糊就强制用矩形，不再走涂抹笔画
+	isRect = toolSub->isMosaicRect || isBlur;
 	// 圆头圆角描边。本项目没有 App::getRoundStrokeStyle 那样的全局缓存，
 	// 就每个 shape 自己持一个 —— StrokeStyle 是不可变的轻对象，代价可以忽略
 	d2d->d2dFactory->CreateStrokeStyle(
@@ -418,6 +421,31 @@ ComPtr<ID2D1Bitmap> ShapeMosaic::createMosaicBitmap(int blockSize)
 	// 解绑，下面 CopyFromBitmap 才能把它当源读
 	ctx->SetTarget(nullptr);
 	if (FAILED(hr)) return result;
+
+	// 高斯模糊模式：直接在 GPU 上对这块区域做高斯模糊，不再读回像素打色块。
+	// 源 targetBitmap 只覆盖包围盒那一小块，所以模糊在区域内闭环，不会糊到区域外。
+	if (isBlur) {
+		ComPtr<ID2D1GaussianBlurEffect> blur;
+		hr = ctx->CreateEffect(CLSID_D2D1GaussianBlur, blur.GetAddressOf());
+		if (FAILED(hr)) return result;
+		blur->SetInput(0, targetBitmap.Get());
+		// 模糊强度随滑块走（粗笔 = 更糊）。默认 28 → 标准差约 14px，明显糊但保留大体轮廓
+		float stdDev = std::clamp(strokeWidth * 0.5f, 4.f, 48.f);
+		blur->SetValue(D2D1_GAUSSIANBLUR_PROP_STANDARD_DEVIATION, stdDev);
+		ComPtr<ID2D1Bitmap1> outBitmap;
+		hr = ctx->CreateBitmap(localSize, nullptr, 0, &targetProps, outBitmap.GetAddressOf());
+		if (FAILED(hr)) return result;
+		ctx->SetTarget(outBitmap.Get());
+		ctx->SetTransform(D2D1::Matrix3x2F::Identity());
+		ctx->BeginDraw();
+		ctx->Clear(D2D1::ColorF(0, 0.0f));
+		ctx->DrawImage(blur.Get());
+		hr = ctx->EndDraw();
+		ctx->SetTarget(nullptr);
+		if (FAILED(hr)) return result;
+		result = outBitmap;
+		return result;
+	}
 
 	// GPU 上的 target 位图不能直接 Map，得先拷到一块带 CPU_READ 的位图上
 	D2D1_BITMAP_PROPERTIES1 cpuProps{

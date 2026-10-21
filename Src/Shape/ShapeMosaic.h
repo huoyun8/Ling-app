@@ -38,4 +38,6 @@ private:
 	D2D1_POINT_2F mosaicOrigin{ 0.f, 0.f };
 	float strokeWidth{ 1.f }, pressX{ 0.f }, pressY{ 0.f };
 	bool isRect{ false };
+	// 高斯模糊模式：整块矩形区域内做高斯模糊，而不是像素色块马赛克
+	bool isBlur{ false };
 };

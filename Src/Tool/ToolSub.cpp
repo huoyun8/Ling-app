@@ -20,10 +20,10 @@ namespace {
 	const std::pair<const wchar_t*, SliderCfg> sliderCfgs[]{
 		{ L"rect",    { L"width",     1.f, 26.f,  2.f } },
 		{ L"ellipse", { L"width",     1.f, 26.f,  2.f } },
-		{ L"arrow",   { L"width",     1.f, 16.f,  3.f } },
+		{ L"arrow",   { L"width",     1.f, 16.f,  5.f } },
 		{ L"number",  { L"radius",    6.f, 86.f, 9.f } },
 		{ L"line",    { L"width",     1.f, 60.f, 12.f } },
-		{ L"text",    { L"fontSize", 10.f, 60.f, 20.f } },
+		{ L"text",    { L"fontSize", 10.f, 60.f, 16.f } },
 		{ L"mosaic",  { L"width",    18.f, 68.f, 28.f } },
 		{ L"eraser",  { L"width",    18.f, 68.f, 28.f } },
 	};
@@ -177,9 +177,11 @@ void ToolSub::showTextTools()
 
 void ToolSub::showMosaicTools()
 {
-	// 这两个没有颜色按钮、窗口窄，initSize 要居中对齐到按钮上
+	// 这两个没有颜色按钮、窗口窄，initSize 要居中对齐到按钮上。
+	// 两个开关按钮：高斯模糊（◇）+ 矩形；initSize 按 2 个按钮排
 	beginTool(L"mosaic");
-	initSize(1, false, true);
+	initSize(2, false, true);
+	makeToggleBtn(L"\u25C7", &isMosaicBlur, L"tool.mosaicBlur", L"blur");
 	makeToggleBtn(L"\ue602", &isMosaicRect, L"tool.rectFill", L"rect");
 	initSlider();
 }

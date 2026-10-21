@@ -38,7 +38,7 @@ public:
 	// ToolMain 与 ToolSub 之间的间距，WinHost::layoutTools() 计算整组高度时要用
 	static constexpr float mainGap{ 2.f };
 public:
-	bool isRectFill{ false }, isEllipseFill{ false }, isArrowFill{ true }, isNumberFill{ true }, isLineTransparent{ false }, isTextBold{ false }, isTextItalic{ false }, isMosaicRect{ false }, isEraserRect{ false };
+	bool isRectFill{ false }, isEllipseFill{ false }, isArrowFill{ true }, isNumberFill{ true }, isLineTransparent{ false }, isTextBold{ false }, isTextItalic{ false }, isMosaicBlur{ false }, isMosaicRect{ true }, isEraserRect{ true };
 private:
 	void onCreated() override;
 	void layout() override;

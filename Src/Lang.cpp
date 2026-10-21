@@ -1,33 +1,8 @@
 ﻿#include "pch.h"
-#include <filesystem>
 #include "Lang.h"
 #include "Util.h"
-#include "Setting.h"
 
 std::unique_ptr<Lang> lang;
-
-namespace {
-	// 语言文件优先从 exe 同目录的 Lang 子目录加载（绿色部署 / 调试方便），
-	// 那个目录不存在才退回 %appdata%\ScreenCapture\Lang。
-	// directory_iterator 碰到不存在的目录会抛 filesystem_error，
-	// 所以用带 error_code 的重载，目录不在就当没有额外语言。
-	std::vector<std::filesystem::path> getLangFiles()
-	{
-		std::vector<std::filesystem::path> result;
-		wchar_t buffer[MAX_PATH]{};
-		GetModuleFileName(nullptr, buffer, MAX_PATH);
-		auto langPath = std::filesystem::path{ buffer }.parent_path().append(L"Lang");
-		if (!std::filesystem::is_directory(langPath)) {
-			langPath = Setting::get()->getDataPath().append(L"Lang");
-		}
-		std::error_code ec;
-		std::filesystem::directory_iterator it{ langPath, ec }, end{};
-		for (; !ec && it != end; it.increment(ec)) {
-			result.push_back(it->path());
-		}
-		return result;
-	}
-}
 
 Lang::Lang()
 {
@@ -41,7 +16,8 @@ void Lang::init()
 {
 	auto ptr = new Lang();
 	lang.reset(ptr);
-	lang->initLang(Setting::get()->getLang());
+	// 只保留简体中文：不再读设置里的旧语种，一律加载内置 zh-CN
+	lang->initLang(L"zh-CN");
 }
 
 void Lang::dispose()
@@ -56,9 +32,8 @@ Lang* Lang::get()
 
 std::wstring Lang::get(const std::wstring& keyPath)
 {
-	// 一路用带默认值的重载：第三方语言文件缺键是常态（程序加了新文案，人家的文件还是老的），
-	// 而带默认值的 GetNamedObject/GetNamedString 不抛异常。缺了先找内置的 en-US，
-	// 连那儿也没有就把键名本身显示出来 —— 界面上难看，但比崩掉好，也一眼能看出缺哪个键
+	// 一路用带默认值的重载，缺键不抛异常：简体中文缺了某个键就把键名本身显示出来 ——
+	// 界面上难看，但比崩掉好，也一眼能看出缺哪个键
 	auto arr = Ling::Util::splitStr(keyPath, L'.');
 	if (arr.size() < 2) return keyPath;
 	auto& self = *lang;
@@ -77,52 +52,20 @@ std::wstring Lang::get(const std::wstring& keyPath)
 
 void Lang::initLang(const std::wstring& langCode)
 {
-	auto [pData, size] = Ling::Util::getRes(langCode);
-	std::wstring builtinJson;
-	if (pData && size > 0)
-		builtinJson = Ling::Util::readTextFromBytes(pData, size);
-	JsonObject builtinObj{ nullptr };
-	if (!builtinJson.empty())
-		builtinObj = JsonObject::Parse(builtinJson);
-
-	if (langCode == L"zh-CN" || langCode == L"en-US") {
-		langObj = builtinObj;
-		return;
+	// 只保留简体中文：en-US 等其它语言资源已从 Lang/ 目录和 Resource.rc 移除，
+	// 这里无条件加载内置 zh-CN，配置里存的旧语种也忽略
+	(void)langCode;
+	auto [pData, size] = Ling::Util::getRes(L"zh-CN");
+	langObj = nullptr;
+	fallbackObj = nullptr;
+	if (pData && size > 0) {
+		auto json = Ling::Util::readTextFromBytes(pData, size);
+		if (!json.empty()) langObj = JsonObject::Parse(json);
 	}
-	// 第三方语言文件：用户自己放进来的，可能是老版本的（缺新加的键）、也可能手工改坏了。
-	// 所以一是用 TryParse（Parse 解析失败直接抛，一路抛出去就是进程没了），
-	// 二是把内置的 en-US 留在 fallbackObj 里给 Lang::get 兜底
-	fallbackObj = builtinObj;
-	bool loaded{ false };
-	for (const auto& entry : getLangFiles()) {
-		std::wstring filename = entry.filename().wstring();
-		if (filename.find(langCode) == std::wstring::npos) continue;
-		auto pathStr = entry.wstring();
-		std::wstring content = Ling::Util::readFileText(entry);
-		JsonObject obj{ nullptr };
-		if (JsonObject::TryParse(content, obj)) {
-			langObj = obj;
-			loaded = true;
-		}
-		else {
-			auto msg = L"lang pare error：" + pathStr + L"\n use English";
-			MessageBox(nullptr, msg.data(), L"ScreenCapture", MB_OK | MB_ICONWARNING);
-		}
-		break;
-	}
-	//文件没找到、或者内容不是合法 JSON：整份都用内置的 en-US
-	if (!loaded) langObj = fallbackObj;
 }
 
 std::vector<std::pair<std::wstring, std::wstring>> Lang::getSupportedLang()
 {
-	std::vector<std::pair<std::wstring, std::wstring>> result = { {L"简体中文",L"zh-CN"},{L"English",L"en-US"} };
-	for (const auto& entry : getLangFiles()) {
-		std::wstring filename = entry.filename().wstring();
-		auto arr = Ling::Util::splitStr(filename, L'.');
-		if (arr.size() == 3 && arr[2] == L"json") {
-			result.push_back({ arr[0] ,arr[1] });
-		}
-	}
-	return result;
+	// 只保留简体中文：语言下拉只剩这一项
+	return { {L"简体中文",L"zh-CN"} };
 }

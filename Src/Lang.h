@@ -18,10 +18,8 @@ public:
 public:
 private:
 	Lang();
-	void load(const std::wstring& lang);
 private:
 	JsonObject langObj;
-	// 用第三方语言文件时才有：内置的 en-US，给 Lang::get 兜底用。
-	// 内置语言（zh-CN / en-US）本身就是全的，这时它是空的（nullptr）
+	// 只保留简体中文后不再加载第三方语言，这个兜底对象恒为 nullptr，留着只是为了不改 get() 的结构
 	JsonObject fallbackObj{ nullptr };
 };
