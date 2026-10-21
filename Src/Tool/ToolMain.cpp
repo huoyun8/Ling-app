@@ -84,7 +84,7 @@ void ToolMain::onCreated()
 		auto& id = btnIds[i];
 		if (id == L"|") {
 			auto spliter = body->makeChild<Ling::Node>();
-			spliter->setSize(dpi, 18.f);
+			spliter->setWidth(dpi);   // 只定宽不定高 → 拉伸成整条竖线，垂直居中（与副编辑框分隔条一致）
 			spliter->setBg(0xDDDDDDff);
 		}
 		else {

@@ -145,9 +145,9 @@ void ToolSub::showRectTools()
 		updateFillIcon();
 	});
 	updateFillIcon();
-	// 分隔条：填充开关 与 后面的形状选择 之间
+	// 分隔条：填充开关 与 后面的形状选择 之间（只定宽不定高 → 拉伸成整条竖线，垂直居中）
 	auto sep = contentNode->makeChild<Ling::Node>();
-	sep->setSize(dpi, 18.f);
+	sep->setWidth(dpi);
 	sep->setBg(0xDDDDDDff);
 	// 第2/3个：空心矩形 / 空心椭圆 —— 单选形状
 	shapeRectBtn = makeShapeSelectBtn(false, L"\ue8e8", L"tool.rectFill");
@@ -246,9 +246,9 @@ void ToolSub::showMosaicTools()
 	initSize(2, false, true);
 	// 形状：开=画框(实心矩形)，关=手绘(实心圆) —— 放前面
 	makeToggleBtn(L"\ue602", L"\ue600", &isMosaicRect, L"tool.rectFill", L"rect");
-	// 分隔条：形状 与 高斯模糊 之间
+	// 分隔条：形状 与 高斯模糊 之间（只定宽不定高 → 拉伸成整条竖线，垂直居中）
 	auto sep = contentNode->makeChild<Ling::Node>();
-	sep->setSize(dpi, 18.f);
+	sep->setWidth(dpi);
 	sep->setBg(0xDDDDDDff);
 	// 高斯模糊：选中=实心菱形 e694 开，未选中=空心菱形 e693 关 —— 放后面
 	makeToggleBtn(L"\ue694", L"\ue693", &isMosaicBlur, L"tool.mosaicBlur", L"blur");
