@@ -24,6 +24,7 @@ WinSettingAbout::WinSettingAbout(Ling::WinBase* parent):Ling::Node(parent)
         btn->setId(key);
         if (key == L"version") {
             auto ver = Ling::Util::getVerNum();
+            // 返回的是 std::array<int,3>，三段一定在
             auto verStr = std::format(L"{}.{}.{}", ver[0], ver[1], ver[2]);
             btn->setText(verStr);
         }

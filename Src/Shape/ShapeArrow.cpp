@@ -125,7 +125,17 @@ void ShapeArrow::mouseMove(const float x, const float y)
 	{
 		if (!path) return;
 		BOOL contains = FALSE;
-		path->FillContainsPoint({ x, y }, nullptr, &contains);
+		if (isFill) {
+			// 实心箭头：整块都是"身上"
+			path->FillContainsPoint({ x, y }, nullptr, &contains);
+		}
+		else {
+			// 空心箭头只有描边那一条是可见的，用 FillContainsPoint 判的是填充区域 ——
+			// 那样点在轮廓内部（视觉上是空的）也会被当成命中，拖不起来也画不上去。
+			// 按描边判才和看到的形状一致；描边本身只有 1 逻辑像素，判定范围放宽 3 倍，
+			// 不然空心箭头几乎点不中
+			path->StrokeContainsPoint({ x, y }, 3.f * win->dpi, nullptr, nullptr, &contains);
+		}
 		if (contains) hoverDraggerIndex = 8;
 	}
 }
@@ -156,6 +166,9 @@ void ShapeArrow::makeArrow()
 	// 每次都要按新的起终点重建，用 ReleaseAndGetAddressOf 放掉上一个，
 	// 否则 GetAddressOf 只是覆盖指针，等于每拖一下漏一个 ID2D1PathGeometry
 	d2d->d2dFactory->CreatePathGeometry(path.ReleaseAndGetAddressOf());
+	// 创建失败（设备丢失 / 显存吃紧）时 path 是空的，下面直接 Open 就是空指针。
+	// 这里留一条空 path 的路径，paint 里已经判过 !path，画面只是这一帧没有箭头
+	if (!path) return;
 	ComPtr<ID2D1GeometrySink> sink;
 	path->Open(sink.GetAddressOf());
 	float dx = endX - startX;

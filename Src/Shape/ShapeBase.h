@@ -20,11 +20,12 @@ public:
 	bool isInRect(const D2D1_RECT_F rect, const float x, const float y);
 public:
 	WinHost* win;
-	bool isUndo;
+	// 必须给初值：除了 History 的撤销/重做，没人给它赋过值，而 WinCap/WinPin 的 paint 循环
+	// 一上来就读 !isUndo。不给初值的话这块内存是垃圾，新建的标注可能第一帧就画不出来
+	bool isUndo{ false };
 	int hoverDraggerIndex{ -1 };
 protected:
-protected:
-	float draggerSize;
+	float draggerSize{ 6.f };
 	// 矩形/椭圆等形状的最小尺寸钳制：宽高小于 2px 时按中心扩到 2px
 	void enforceMinSize(D2D1_RECT_F& r);
 	Microsoft::WRL::ComPtr<ID2D1SolidColorBrush> brushDragger;

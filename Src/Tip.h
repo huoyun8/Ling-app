@@ -41,11 +41,20 @@ private:
 	SIZE measureText(const std::wstring& str);
 	// 量出气泡的固定内边距，整个进程只需要量一次
 	void learnPadding();
+	struct BoundBtn
+	{
+		Ling::Button* btn{ nullptr };
+		winrt::event_token enterTok{}, leaveTok{};
+	};
 private:
 	Ling::WinBase* win;
 	HWND tipHwnd{ nullptr };
 	// 当前提示的归属节点。只做指针比较，不解引用 —— 控件被销毁后这个指针可能是野的。
 	Ling::Node* owner{ nullptr };
+	// bind 过的按钮与它们的订阅。ToolSub 每次切换工具都会把按钮整批销毁重建，
+	// 订阅不摘掉就会一直挂在 hello 里的 event 上、指向已经释放的节点；
+	// Tip 析构前要逐个 remove，所以得记下来
+	std::vector<BoundBtn> boundBtns;
 	std::wstring text;
 	float anchorX{ 0.f }, anchorY{ 0.f };
 	// visible: 提示已经在屏上；否则要么没提示，要么正在等那 1 秒

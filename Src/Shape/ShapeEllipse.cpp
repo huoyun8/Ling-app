@@ -110,7 +110,10 @@ void ShapeEllipse::mouseDown(const float x, const float y)
 	if (hoverDraggerIndex == -1) { //首次创建
 		pressX = x;
 		pressY = y;
-		hoverDraggerIndex = 0;
+		// 首次创建统一用 4（右下角）：与 ShapeRect 一致，也保证 mouseDrag 里那条
+		// "按按下点重新算矩形"的分支能走到。用 0 的话要拿 rect.right/bottom 当初值，
+		// 而这时 rect 还是空的，拖出来的框会整体偏出去一个位移
+		hoverDraggerIndex = 4;
 	}
 	else if (hoverDraggerIndex == 0) {
 		pressX = rect.right;

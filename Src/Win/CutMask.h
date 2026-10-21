@@ -57,7 +57,7 @@ private:
 	std::vector<D2D1_RECT_F> winRect;
 	POINT pressPos{};
 	Ling::WinBase* win{ nullptr };
-	float paddingTop{ 2.f }, paddingMargin{3.f};
+	float paddingMargin{3.f};
 	MaskHit adjustHit{ MaskHit::None };
 	// 调整全程以按下那一刻的矩形为基准算，不做累加，免得漂移
 	D2D1_RECT_F adjustStartRect{};

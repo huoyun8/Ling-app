@@ -168,14 +168,18 @@ void ShapeNumber::mouseMove(const float x, const float y)
 void ShapeNumber::mouseWheel(const float x, const float y, const short delta)
 {
 	isWheel = true;
-	if (delta < 0) {
-		if (r <= 6.f * win->dpi) return;
-		r--;
-	}
-	else {
-		r++;
-	}
+	// 下限交给 setShapeSliderVal 按滑块值域表夹（表中的 min/max 是逻辑像素，内部乘 dpi
+	// 之后才是物理像素）。这里不要再写一个 "6.f * win->dpi" 的阈值 —— 那是把值域表里
+	// 那一份复制了第二遍，以后改表就漏了这一处；而且 6 逻辑像素在 150% 缩放下是 9 物理
+	// 像素，会先被这个阈值卡住，缩不到值域真正允许的最小半径
+	auto before{ r };
+	if (delta < 0) r--;
+	else r++;
 	r = win->toolSub->setShapeSliderVal(L"number", r);
+	// 已经顶到值域的头了（夹完还是原值）：几何体和文字都不必重建，省下一格一次的
+	// path 分配和整窗重绘。isWheel 保持 true —— 滚轮确实刚动过，下次 mousemove 会走
+	// mouseMove 里的重排分支把夹点摆回正确位置，那里会自己把它复位
+	if (r == before) return;
 	makePath();
 	makeTextLayout();
 	win->refresh();

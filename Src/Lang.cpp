@@ -38,14 +38,8 @@ std::wstring Lang::get(const std::wstring& keyPath)
 	if (arr.size() < 2) return keyPath;
 	auto& self = *lang;
 	auto obj = self.langObj.GetNamedObject(arr[0], nullptr);
-	if (obj) {
-		auto text = obj.GetNamedString(arr[1], L"");
-		if (!text.empty()) return std::wstring{ text };
-	}
-	if (!self.fallbackObj) return keyPath;
-	auto def = self.fallbackObj.GetNamedObject(arr[0], nullptr);
-	if (!def) return keyPath;
-	auto text = def.GetNamedString(arr[1], L"");
+	if (!obj) return keyPath;
+	auto text = obj.GetNamedString(arr[1], L"");
 	if (text.empty()) return keyPath;
 	return std::wstring{ text };
 }
@@ -57,15 +51,8 @@ void Lang::initLang(const std::wstring& langCode)
 	(void)langCode;
 	auto [pData, size] = Ling::Util::getRes(L"zh-CN");
 	langObj = nullptr;
-	fallbackObj = nullptr;
 	if (pData && size > 0) {
 		auto json = Ling::Util::readTextFromBytes(pData, size);
 		if (!json.empty()) langObj = JsonObject::Parse(json);
 	}
-}
-
-std::vector<std::pair<std::wstring, std::wstring>> Lang::getSupportedLang()
-{
-	// 只保留简体中文：语言下拉只剩这一项
-	return { {L"简体中文",L"zh-CN"} };
 }

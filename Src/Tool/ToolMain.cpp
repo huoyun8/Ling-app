@@ -46,10 +46,6 @@ ToolMain::~ToolMain()
 {
 }
 
-void ToolMain::init()
-{
-}
-
 // 返回 curId 对应按钮的中心相对 ToolMain 左边的偏移（物理像素）。
 // btnIds 含分隔符而 btns 不含，所以要单独维护 btns 的下标，不能拿 i 去索引 btns。
 float ToolMain::getBtnCenterX()

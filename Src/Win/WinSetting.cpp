@@ -110,27 +110,35 @@ void WinSetting::onMenuItemClick(Ling::Button* menuItem)
 {
 	auto index = Ling::Util::getIndex(menus, menuItem);
 	if (index < 0 || index == menuIndex) return;
+	// menuIndex 初值是 0，menus 在第一项点击时已经填满了，但 index 还是要跟 menus 的实际
+	// 长度对一遍 —— 以后菜单项增删、或者 index 从别处进来时，越界访问就是崩
+	if ((size_t)menuIndex >= menus.size()) menuIndex = 0;
 	auto oldItem = menus[menuIndex];
-	oldItem->setColor(0x333333FF);
-	oldItem->setBg(0x00000000);
-	oldItem->setHoverColor(0x000000ff);
-	oldItem->setHoverBg(0xE1E1E3ff);
+	if (oldItem) {
+		oldItem->setColor(0x333333FF);
+		oldItem->setBg(0x00000000);
+		oldItem->setHoverColor(0x000000ff);
+		oldItem->setHoverBg(0xE1E1E3ff);
+	}
 	menuIndex = index;
 	menuItem->setColor(0xFFFFFFFF);
 	menuItem->setBg(0x597ef7ff);
 	menuItem->setHoverColor(0xFFFFFFFF);
 	menuItem->setHoverBg(0x597ef7ff);
 
-	body->removeChild(content);
-	if (menuIndex == 0) {
-		content = body->makeChild<WinSettingCommon>();
-	}
-	else if (menuIndex == 1) {
-		content = body->makeChild<WinSettingShortcut>();
-	}
-	else if (menuIndex == 2) {
-		content = body->makeChild<WinSettingAbout>();
-	}
+    body->removeChild(content);
+    if (menuIndex == 0) {
+        content = body->makeChild<WinSettingCommon>();
+    }
+    else if (menuIndex == 1) {
+        content = body->makeChild<WinSettingShortcut>();
+    }
+    else if (menuIndex == 2) {
+        content = body->makeChild<WinSettingAbout>();
+    }
+    // 上面三条都不命中时 content 会停在被 removeChild 摘掉的那个节点上，
+    // 下面再往它身上设属性就是操作一个已经不在界面上的对象。真兜底：什么都不建
+    if (!content) return;
 	content->setFlexGrow(1.0);
 	content->setHeightPercent(100.f);
 	content->setPadding(20.f,40.f,20.f,40.f);

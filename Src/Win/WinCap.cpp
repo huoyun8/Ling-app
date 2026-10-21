@@ -20,17 +20,6 @@ namespace
     constexpr float scaleNum{ 5.f }, srcW{ 50.f }, srcH{ 30.f };
     constexpr float pixImgH{ scaleNum * srcH };
     constexpr float pixW{ srcW * scaleNum };
-
-    // 把坐标夹在 [min, max-size] 里，用于把工具条保持在显示器工作区范围内
-    int clampPos(float val, float size, int min, int max)
-    {
-        auto upper = max - static_cast<int>(size);
-        if (upper < min) upper = min;
-        auto result = static_cast<int>(val);
-        if (result < min) result = min;
-        if (result > upper) result = upper;
-        return result;
-    }
 }
 
 std::unique_ptr<WinCap> winCap;
@@ -119,6 +108,12 @@ void WinCap::layout()
     auto ctx = canvas->startPaint();
     if (!ctx) return;
     ctx->Clear(0);
+    // 抓屏失败（显示器正在切换分辨率、会话锁定之类）时 screenImg 是空的，
+    // 这时只清屏就行 —— 后面所有绘制都依赖它，硬画下去会一路空指针
+    if (!screenImg) {
+        canvas->finishPaint();
+        return;
+    }
     D2D1_RECT_F destRect = D2D1::RectF(0, 0, (float)w, (float)h);
     ctx->DrawBitmap(screenImg.Get(), destRect);
     // 标注：shape 一律用窗口坐标（本窗口铺满桌面、scale 恒为 1），直接画在选区之上
@@ -209,6 +204,7 @@ void WinCap::setPixPos(POINT pos)
 void WinCap::getPixImg(POINT pos)
 {
     if (isPress || stage != CapStage::Select) return;
+    if (!screenImg) return;   // 抓屏失败，放大镜没有源可取样
     const long sw = static_cast<long>(srcW), sh = static_cast<long>(srcH);
     const long iw = static_cast<long>(w), ih = static_cast<long>(h);
     // 期望的源矩形：以光标为正中心，可以越出屏幕。
@@ -238,7 +234,7 @@ void WinCap::paintPix(ID2D1DeviceContext* ctx)
 	if (isPress || stage != CapStage::Select) return;
     D2D1_RECT_F pixRect{ (float)pixPos.x, (float)pixPos.y, pixPos.x + pixW, pixPos.y + pixImgH + 76.f * dpi };
     ctx->FillRectangle(pixRect, brushBg.Get());
-    if (pixSrcRect.right > pixSrcRect.left && pixSrcRect.bottom > pixSrcRect.top) {
+    if (pixImg && pixSrcRect.right > pixSrcRect.left && pixSrcRect.bottom > pixSrcRect.top) {
         D2D1_RECT_F imgRect{
             pixPos.x + pixSrcRect.left * scaleNum,
             pixPos.y + pixSrcRect.top * scaleNum,
@@ -377,6 +373,7 @@ std::tuple<int, int, int, int> WinCap::getCMYK(const BYTE& r, const BYTE& g, con
 ComPtr<ID2D1Bitmap1> WinCap::getCutImg()
 {
     ComPtr<ID2D1Bitmap1> cutImg;
+    if (!screenImg) return cutImg;
     auto& maskRect = cutMask->maskRect;
     const UINT32 cw = (UINT32)(maskRect.right - maskRect.left);
     const UINT32 ch = (UINT32)(maskRect.bottom - maskRect.top);
@@ -385,10 +382,12 @@ ComPtr<ID2D1Bitmap1> WinCap::getCutImg()
     prop.pixelFormat = screenImg->GetPixelFormat();
     prop.bitmapOptions = D2D1_BITMAP_OPTIONS_NONE;
     screenImg->GetDpi(&prop.dpiX, &prop.dpiY);
-    Ling::D2D::get()->deviceContext->CreateBitmap(D2D1::SizeU(cw, ch), nullptr, 0, &prop, cutImg.GetAddressOf());
+    auto hr = Ling::D2D::get()->deviceContext->CreateBitmap(D2D1::SizeU(cw, ch), nullptr, 0, &prop, cutImg.GetAddressOf());
+    if (FAILED(hr) || !cutImg) return nullptr;
     auto start = D2D1::Point2U(0, 0);
     auto rect = D2D1::RectU((UINT32)maskRect.left, (UINT32)maskRect.top, (UINT32)maskRect.right, (UINT32)maskRect.bottom);
-    cutImg->CopyFromBitmap(&start, screenImg.Get(), &rect);
+    hr = cutImg->CopyFromBitmap(&start, screenImg.Get(), &rect);
+    if (FAILED(hr)) return nullptr;
     return cutImg;
 }
 
@@ -468,7 +467,8 @@ void WinCap::onDown(POINT pos, bool isRight)
         return;
     }
     if (stage == CapStage::Select) {
-        // 手动拖动框选区：沿用当前吸附开关（右键后恢复智能吸附，等同快捷键重进选区）
+        // 手动拖动框选区。吸附开关由 cutMask->autoSnap 决定：首次进入是开的（可智能选窗口），
+        // 右键重进选区后 restartSelect() 会把它关掉，于是这里就是纯手动拉框，不再智能吸附
         isPress = true;
         cutMask->startMakeRect(pos);
     }
@@ -716,11 +716,9 @@ void WinCap::layoutTool(Ling::WinBase* tool)
     if (toolX + toolW > mi.rcWork.right) toolX = mi.rcWork.right - toolW;
     tool->setPosition(toolX, toolY);
 }
-
-
 void WinCap::startPin()
 {
-    if (!cutMask->hasRect()) return;
+    if (!cutMask->hasRect() || !screenImg) return;
     auto& maskRect = cutMask->maskRect;
     // WinPin 构造里会回头来取 getCutImg()，所以得先把它建起来再关自己
     WinPin::init(int(maskRect.left) + x, int(maskRect.top) + y,
@@ -791,13 +789,17 @@ void WinCap::layoutTools()
 void WinCap::onToolStyleChanged()
 {
     if (editingText) editingText->applyStyle();
-    // 马赛克高斯模糊：滑动条一动，最后编辑的那个模糊形状立刻按新强度重建显现
+    // 马赛克高斯模糊：滑动条一动，最后编辑的那个模糊形状立刻按新强度重建显现。
+    // 注意 return 必须在找到之后，不能在循环体里无条件 return —— 那会只看最后一个 shape
     if (history && !history->shapes.empty()) {
         for (int i = (int)history->shapes.size() - 1; i >= 0; --i) {
             auto s = history->shapes[i].get();
             if (!s || s->isUndo) continue;
-            if (auto* m = dynamic_cast<ShapeMosaic*>(s)) m->rebuildLive();
-            return;
+            if (auto* m = dynamic_cast<ShapeMosaic*>(s)) {
+                m->rebuildLive();
+                return;
+            }
+            return;   // 只看最后一个未撤销的元素，与"只可编辑最后一个"的口径一致
         }
     }
 }

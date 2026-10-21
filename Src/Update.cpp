@@ -209,6 +209,8 @@ namespace {
 			auto guard = ThreadPoolTimer::CreateTimer([op](const ThreadPoolTimer&) { op.Cancel(); },
 				std::chrono::seconds(10));
 			std::wstring body{ co_await op };
+			// 拿到结果就把超时定时器撤掉。不撤的话它到点会去 Cancel 一个已经完成的
+			// 异步操作 —— 版本号取回来只成功了一半、后面下载 exe 时才被这把刀砍断
 			guard.Cancel();
 			JsonObject obj{ nullptr };
 			//服务端返回的东西不是合法 JSON（被网关塞了个错误页之类）：当没这回事
@@ -226,7 +228,13 @@ namespace {
 				Ling::App::get()->dq.TryEnqueue([verStr]() { promptNoPermission(verStr); });
 				co_return;
 			}
-			auto buffer = co_await client.GetBufferAsync(Uri{ exeUrl });
+			// 下载 exe 也要有上限：网速慢或者卡在半路时，没有超时的话这个协程就一直挂着，
+			// 连接和后台线程都收不回来（上面那次只是把版本号要回来，几 M 的 exe 是另一回事）
+			auto dlOp = client.GetBufferAsync(Uri{ exeUrl });
+			auto dlGuard = ThreadPoolTimer::CreateTimer([dlOp](const ThreadPoolTimer&) { dlOp.Cancel(); },
+				std::chrono::seconds(120));
+			auto buffer = co_await dlOp;
+			dlGuard.Cancel();
 			std::vector<BYTE> bytes(buffer.Length());
 			DataReader::FromBuffer(buffer).ReadBytes(bytes);
 			//不是 PE 文件：多半下回来的是错误页，不是 exe

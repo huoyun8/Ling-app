@@ -62,24 +62,30 @@ std::filesystem::path Setting::getDataPath()
     return dataPath; //复制一份路径对象，不允许就地修改
 }
 
-const JsonObject Setting::getConfigObj()
-{
-    return configObj;
-}
-
 void Setting::setShortcutKey(const std::wstring& type, const std::vector<std::wstring>& keys)
 {
+    // keys 为空时不能拼出空串再 erase 首字符 —— 那是删到界外。理论上 WinSettingShortcut
+    // 会先校验，但这里再兜一层：空组合直接忽略，别让一次误调用把现有热键注销掉
+    if (keys.empty()) return;
     std::wstring str;
     for (size_t i = 0; i < keys.size(); i++)
     {
-        str += L"+" + keys[i];
+        if (!str.empty()) str += L"+";
+        str += keys[i];
     }
-    str.erase(0,1);
-    auto shortcutKey = configObj.GetNamedObject(L"shortcutKey");
+    auto shortcutKey = configObj.GetNamedObject(L"shortcutKey", nullptr);
+    if (!shortcutKey) {
+        // 老配置文件里没有这一层时现建一层，别让规范默认配置缺的键变成一次异常
+        shortcutKey = JsonObject();
+        configObj.SetNamedValue(L"shortcutKey", shortcutKey);
+    }
     shortcutKey.SetNamedValue(type, JsonValue::CreateStringValue(str));
     auto app = Ling::App::get();
-    app->unRegHotKey(capShortcutMsgId);
-    app->regHotKey(str, capShortcutMsgId);
+    // 只换截图那一组热键；别的 type 将来若加进来，别拿它去冲掉截图热键
+    if (type == L"cap") {
+        app->unRegHotKey(capShortcutMsgId);
+        app->regHotKey(str, capShortcutMsgId);
+    }
     save();
 }
 
@@ -171,18 +177,6 @@ std::wstring Setting::getLang()
     auto common = configObj.GetNamedObject(L"common", nullptr);
     if (!common) return L"zh-CN";
     return std::wstring{ common.GetNamedString(L"language", L"zh-CN") };
-}
-
-void Setting::setLang(const std::wstring& langCode)
-{
-    auto common = setting->configObj.GetNamedObject(L"common", nullptr);
-    if (!common) {
-        common = JsonObject();
-        setting->configObj.SetNamedValue(L"common", common);
-    }
-    common.SetNamedValue(L"language", JsonValue::CreateStringValue(langCode));
-    setting->save();
-	Lang::get()->initLang(langCode);
 }
 
 JsonObject Setting::getToolObj(const std::wstring& tool)

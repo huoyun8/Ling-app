@@ -119,24 +119,32 @@ void ShapeMosaic::mouseDrag(const float x, const float y)
 	}
 	// Shift 按下时不再追加顶点，而是拖动端点 —— 效果是一条直线；松开 Shift 就是自由涂抹
 	if (hoverDraggerIndex == 0) {
+		if (linePoints.empty()) return;
 		if (shiftDown) {
 			auto& p = linePoints[0];
 			p.x = x;
 			p.y = y;
 		}
-		else {
+		else if (needSample(x, y, false)) {
 			linePoints.insert(linePoints.begin(), { x,y });
+		}
+		else {
+			return;
 		}
 		makePath();
 	}
 	else if (hoverDraggerIndex == 1) {
+		if (linePoints.empty()) return;
 		if (shiftDown) {
 			auto& p = linePoints[linePoints.size() - 1];
 			p.x = x;
 			p.y = y;
 		}
-		else {
+		else if (needSample(x, y, true)) {
 			linePoints.push_back({ x,y });
+		}
+		else {
+			return;
 		}
 		makePath();
 	}
@@ -198,6 +206,7 @@ void ShapeMosaic::mouseDown(const float x, const float y)
 		return;
 	}
 	if (hoverDraggerIndex == -1) { //首次创建
+		linePoints.clear();
 		linePoints.push_back({ x,y });
 		if (GetKeyState(VK_SHIFT) & 0x8000) {
 			// 直线模式需要两个点，末点跟着鼠标走
@@ -305,6 +314,15 @@ void ShapeMosaic::makePath()
 	}
 	sink->EndFigure(D2D1_FIGURE_END_OPEN);
 	sink->Close();
+}
+
+bool ShapeMosaic::needSample(float x, float y, bool atEnd) const
+{
+	if (linePoints.empty()) return true;
+	auto& ref = atEnd ? linePoints.back() : linePoints.front();
+	auto step = minStep * win->dpi;
+	auto dx = x - ref.x, dy = y - ref.y;
+	return dx * dx + dy * dy >= step * step;
 }
 
 void ShapeMosaic::resetMosaic()

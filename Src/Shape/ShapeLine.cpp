@@ -60,24 +60,32 @@ void ShapeLine::mouseDrag(const float x, const float y)
 	// Shift 按下时不再追加顶点，而是拖动端点 —— 效果是一条直线；松开 Shift 就是自由画
 	bool shiftDown = (GetKeyState(VK_SHIFT) & 0x8000) != 0;
 	if (hoverDraggerIndex == 0) {
+		if (linePoints.empty()) return;
 		if (shiftDown) {
 			auto& p = linePoints[0];
 			p.x = x;
 			p.y = y;
 		}
-		else {
+		else if (needSample(x, y, false)) {
 			linePoints.insert(linePoints.begin(), { x,y });
+		}
+		else {
+			return;
 		}
 		makePath();
 	}
 	else if (hoverDraggerIndex == 1) {
+		if (linePoints.empty()) return;
 		if (shiftDown) {
 			auto& p = linePoints[linePoints.size() - 1];
 			p.x = x;
 			p.y = y;
 		}
-		else {
+		else if (needSample(x, y, true)) {
 			linePoints.push_back({ x,y });
+		}
+		else {
+			return;
 		}
 		makePath();
 	}
@@ -98,6 +106,7 @@ void ShapeLine::mouseDrag(const float x, const float y)
 void ShapeLine::mouseDown(const float x, const float y)
 {
 	if (hoverDraggerIndex == -1) { //首次创建
+		linePoints.clear();
 		linePoints.push_back({ x,y }); 
 		if (GetKeyState(VK_SHIFT) & 0x8000) {
 			linePoints.push_back({ x,y });
@@ -114,13 +123,15 @@ void ShapeLine::mouseDown(const float x, const float y)
 
 void ShapeLine::mouseUp(const float x, const float y)
 {
+	// 没建过顶点（只有按下马上弹起、又被判成无效的那种）时下面两处下标都是越界的
+	if (linePoints.empty()) return;
 	auto half{ draggerSize / 2 };
-	auto& start = linePoints[0];
+	auto& start = linePoints.front();
 	draggers[0].left = start.x - half;
 	draggers[0].top = start.y - half;
 	draggers[0].right = start.x + half;
 	draggers[0].bottom = start.y + half;
-	auto& end = linePoints[linePoints.size() - 1];
+	auto& end = linePoints.back();
 	draggers[1].left = end.x - half;
 	draggers[1].top = end.y - half;
 	draggers[1].right = end.x + half;
@@ -153,9 +164,11 @@ void ShapeLine::setCursor()
 
 void ShapeLine::makePath()
 {
+	if (linePoints.empty()) return;
 	auto d2d = Ling::D2D::get();
 	// ReleaseAndGetAddressOf 而不是 GetAddressOf：后者不放旧对象，自由画时每个鼠标事件漏一个几何体
 	d2d->d2dFactory->CreatePathGeometry(path.ReleaseAndGetAddressOf());
+	if (!path) return;
 	ComPtr<ID2D1GeometrySink> sink;
 	path->Open(sink.GetAddressOf());
 	sink->BeginFigure(linePoints[0], D2D1_FIGURE_BEGIN_HOLLOW);
@@ -164,6 +177,15 @@ void ShapeLine::makePath()
 	}	
 	sink->EndFigure(D2D1_FIGURE_END_OPEN);
 	sink->Close();
+}
+
+bool ShapeLine::needSample(float x, float y, bool atEnd) const
+{
+	if (linePoints.empty()) return true;
+	auto& ref = atEnd ? linePoints.back() : linePoints.front();
+	auto step = minStep * win->dpi;
+	auto dx = x - ref.x, dy = y - ref.y;
+	return dx * dx + dy * dy >= step * step;
 }
 
 float  ShapeLine::pointToSegmentDistance(const D2D1_POINT_2F& p, const D2D1_POINT_2F& a, const D2D1_POINT_2F& b)

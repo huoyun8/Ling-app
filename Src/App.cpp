@@ -40,13 +40,24 @@ App* App::get()
 
 void App::takeScreenShot(int x, int y, int w, int h, ID2D1Bitmap1** img)
 {
+    if (!img || w <= 0 || h <= 0) return;
+    *img = nullptr;
     HDC hScreen = GetDC(NULL);
+    if (!hScreen) return;
     HDC hDC = CreateCompatibleDC(hScreen);
     HBITMAP hBitmap = CreateCompatibleBitmap(hScreen, w, h);
+    if (!hDC || !hBitmap) {
+        // 显示器正在切换分辨率 / 会话锁定等情况下这几个 GDI 对象会拿不到，
+        // 不拦一下下面的 SelectObject / GetDIBits 会一路带着 NULL 往下走
+        if (hBitmap) DeleteObject(hBitmap);
+        if (hDC) DeleteDC(hDC);
+        ReleaseDC(NULL, hScreen);
+        return;
+    }
     auto oldObj = SelectObject(hDC, hBitmap);
-    BOOL bRet = BitBlt(hDC, 0, 0, w, h, hScreen, x, y, SRCCOPY);
+    BitBlt(hDC, 0, 0, w, h, hScreen, x, y, SRCCOPY);
     ReleaseDC(NULL, hScreen);
-    std::vector<BYTE> data(w * 4 * h);
+    std::vector<BYTE> data((size_t)w * 4 * h);
     BITMAPINFO bmi{};
     bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
     bmi.bmiHeader.biWidth = w;
@@ -54,16 +65,18 @@ void App::takeScreenShot(int x, int y, int w, int h, ID2D1Bitmap1** img)
     bmi.bmiHeader.biPlanes = 1;
     bmi.bmiHeader.biBitCount = 32;
     bmi.bmiHeader.biCompression = BI_RGB;
-    GetDIBits(hDC, hBitmap, 0, h, data.data(), &bmi, DIB_RGB_COLORS);
+    auto lines = GetDIBits(hDC, hBitmap, 0, h, data.data(), &bmi, DIB_RGB_COLORS);
     SelectObject(hDC, oldObj);
     DeleteDC(hDC);
     DeleteObject(hBitmap);
+    if (lines == 0) return;
     D2D1_BITMAP_PROPERTIES1 props = {
        .pixelFormat{D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_IGNORE)},
        .dpiX{96.0f}, .dpiY{96.0f}, .bitmapOptions{D2D1_BITMAP_OPTIONS_NONE}
     };
     auto d2d = Ling::D2D::get();
-    auto hr = d2d->deviceContext->CreateBitmap(D2D1::SizeU(w, h), data.data(), w * 4, props, img);
+    // 建失败时 *img 保持为 nullptr，调用方（WinCap::onCreated）会因此跳过整帧的绘制
+    d2d->deviceContext->CreateBitmap(D2D1::SizeU(w, h), data.data(), w * 4, props, img);
 }
 
 std::tuple<int, int, int, int> App::getScreenArea()

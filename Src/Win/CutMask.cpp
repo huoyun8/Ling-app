@@ -9,7 +9,6 @@ using namespace Microsoft::WRL;
 CutMask::CutMask(Ling::WinBase* win) :win{ win }
 {
 	strokeWidth = 2 * win->dpi;
-	paddingTop *= win->dpi;
 	paddingMargin *= win->dpi;
 	auto d2d = Ling::D2D::get();
 	d2d->deviceContext->CreateSolidColorBrush(D2D1::ColorF(D2D1::ColorF::White), brushText.GetAddressOf());
@@ -262,14 +261,17 @@ void CutMask::adjust(POINT pos)
 
 void CutMask::paint(ID2D1DeviceContext* ctx)
 {
-	if (!layout) return;
+	// 判断"要不要画"只看有没有选区，不看尺寸标签的 layout：
+	// layout 是 makeTextLayout 失败（字体/字号异常）时的副产物，拿它当守卫会让
+	// 整个压暗层和选区边框一起消失，选区还在却看不见
+	if (!hasRect()) return;
 	ctx->FillRectangle(D2D1::RectF(0.f, 0.f, win->w, maskRect.top), brushBg.Get());
 	ctx->FillRectangle(D2D1::RectF(0.f, maskRect.bottom, win->w, win->h), brushBg.Get());
 	ctx->FillRectangle(D2D1::RectF(0.f, maskRect.top, maskRect.left, maskRect.bottom), brushBg.Get());
 	ctx->FillRectangle(D2D1::RectF(maskRect.right, maskRect.top, win->w, maskRect.bottom), brushBg.Get());
 	auto halfStrokeWidth{ strokeWidth / 2.f };
 	ctx->DrawRectangle(D2D1::RectF(maskRect.left - halfStrokeWidth, maskRect.top - halfStrokeWidth, maskRect.right + halfStrokeWidth, maskRect.bottom + halfStrokeWidth), brushBorder.Get(), strokeWidth);
-	if (hideLabel) return;
+	if (hideLabel || !layout) return;
 	ctx->FillRectangle(layoutRect, brushBg.Get());
 	ctx->DrawTextLayout({ layoutRect.left+ paddingMargin, layoutRect.top+ paddingMargin }, layout.Get(), brushText.Get(), D2D1_DRAW_TEXT_OPTIONS_NONE);
 }

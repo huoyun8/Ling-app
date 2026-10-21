@@ -190,7 +190,15 @@ void ShapeText::finishEdit()
 	if (text.empty()) {
 		// 空文本不留痕：点一下没输入就走开，不该在 history 里攒一堆看不见的 shape。
 		// 不能在这儿直接删 —— 本函数是从 shape 自己的事件回调里调进来的，删了后面还要用 this。
-		Ling::App::get()->dq.TryEnqueue([w = win, self = this]() {
+		// 延迟到下一轮消息循环：这中间窗口可能已经被关掉（history 随宿主一起析构），
+		// 所以先拿宿主在 App 窗口表里的位置做存活判断 —— 宿主析构时会把自己从表里摘掉，
+		// 那时候再解引用 win / history 就是 use-after-free
+		auto w = win;
+		Ling::App::get()->dq.TryEnqueue([w, self = this]() {
+			auto app = Ling::App::get();
+			if (!app) return;
+			if (std::find(app->windows.begin(), app->windows.end(), w) == app->windows.end()) return;
+			if (!w->history) return;
 			w->history->removeShape(self);
 		});
 	}

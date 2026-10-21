@@ -16,12 +16,16 @@ public:
 public:
 private:
 	void makePath();
+	// 自由涂抹的采样节流：光标挪够 minStep 才记一个顶点，避免长笔画把点位和几何体撑爆
+	bool needSample(float x, float y, bool atEnd) const;
 	void resetEraser();
 	void updateDraggers();
 	void initBackgroundBrush();
 	float pointToSegmentDistance(const D2D1_POINT_2F& p, const D2D1_POINT_2F& a, const D2D1_POINT_2F& b);
 	void hitTest(const D2D1_POINT_2F& mousePos);
 private:
+	// 采样步长（逻辑像素）
+	static constexpr float minStep{ 2.f };
 	D2D1_RECT_F rect{ 0.f,0.f,0.f,0.f };
 	std::vector<D2D1_RECT_F> draggers;
 	std::vector<D2D1_POINT_2F> linePoints;

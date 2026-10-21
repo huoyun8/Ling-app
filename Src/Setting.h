@@ -13,13 +13,12 @@ public:
 	static void dispose();
 	static Setting* get();
 	std::filesystem::path getDataPath();
-	const JsonObject getConfigObj();
 	void setShortcutKey(const std::wstring& type, const std::vector<std::wstring>& keys);
 	std::wstring getShortcutKey(const std::wstring& type);
 	void setAutoStart(bool autoStart);
 	bool getAutoStart();
+	// 配置里记的语言代码。只保留简体中文后语言下拉已经没了，这里留着是为了读旧配置不报错
 	std::wstring getLang();
-	void setLang(const std::wstring& lang);
 	void initShortcutKeys();
 	// 贴图窗口子工具栏（ToolSub）的状态。每个工具在 config.json 的 toolPin 下各占一组，
 	// 组名就是 ToolMain 上的按钮 id（rect / ellipse / ... / eraser），键名由调用方给

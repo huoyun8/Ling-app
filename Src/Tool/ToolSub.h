@@ -39,7 +39,7 @@ public:
 	static constexpr float mainGap{ 2.f };
 public:
 	// isEllipseShape：矩形工具当前画的是椭圆(true)还是矩形(false)。矩形/椭圆已合并成一个工具。
-	bool isRectFill{ false }, isEllipseShape{ false }, isEllipseFill{ false }, isArrowFill{ true }, isNumberFill{ true }, isLineTransparent{ false }, isTextBold{ false }, isTextItalic{ false }, isMosaicBlur{ false }, isMosaicRect{ true }, isEraserRect{ true };
+	bool isRectFill{ false }, isEllipseShape{ false }, isArrowFill{ true }, isNumberFill{ true }, isLineTransparent{ false }, isTextBold{ false }, isTextItalic{ false }, isMosaicBlur{ false }, isMosaicRect{ true }, isEraserRect{ true };
 private:
 	void onCreated() override;
 	void layout() override;
@@ -114,8 +114,5 @@ private:
 	Ling::Button* fillBtn{ nullptr };
 	// 矩形工具的两个形状单选按钮（空心矩形 / 空心椭圆），syncShapeSelect 用来点亮选中态
 	Ling::Button* shapeRectBtn{ nullptr }, * shapeEllBtn{ nullptr };
-	// 序号半径的取值范围（逻辑像素）。下限跟着 ShapeNumber 拖拽/滚轮的下限走，
-	// 上限给滑块留个头 —— 再大就超出滑块能表达的范围了，拖拽仍可继续放大，只是不再回写
-	static constexpr float numberMin{ 6.f }, numberMax{ 86.f };
 	std::vector<UINT32> colors = { 0XCF1322FF, 0XD48806FF, 0X389E0DFF, 0X13C2C2FF, 0X0958D9FF, 0X722ED1FF, 0XEB2F96FF, 0X000000FF, 0XFFFFFFFF };
 };

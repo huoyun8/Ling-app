@@ -44,6 +44,12 @@ WinPin::WinPin(int x, int y, int w, int h, const std::vector<BYTE>* data) : WinH
 	else {
 		screenImg = WinCap::get()->getCutImg();
 	}
+	// 底图没建起来（抓屏失败 / 选区退化）时把窗口尺寸归零，后面所有"按底图尺寸"的运算都得到 0，
+	// 绘制和导出会直接走空分支，而不是拿一块不存在的位图往下画
+	if (!screenImg) {
+		this->w = 0.f;
+		this->h = 0.f;
+	}
 	toolMain = std::make_unique<ToolMain>(this);
     toolSub = std::make_unique<ToolSub>(this);
 	layoutTools();
@@ -341,10 +347,27 @@ void WinPin::onDown(POINT pos, BOOL isRight)
 	if (isRight) {
 		// 钉屏态：编辑器是不需要的，右键不把工具条请回来，保持只剩图
 		if (pinned) return;
+		// 工具条显示着、光标又压在一个更早的标注上：把它解锁成编辑目标（越过"只编辑最后一个"）。
+		// 与 WinCap 右键"选中编辑"是同一个用法；找不到就落到下面的"收起/展开工具条"
+		if (IsWindowVisible(toolMain->hwnd)) {
+			auto imgPos = toImgPos(pos);
+			for (int i{ (int)history->shapes.size() - 1 }; i >= 0; i--) {
+				auto cur = history->shapes[i].get();
+				if (cur->isUndo) continue;
+				cur->mouseMove((float)imgPos.x, (float)imgPos.y);
+				if (cur->hoverDraggerIndex >= 0) {
+					editTarget = cur;
+					shapeHover = cur;
+					refresh();
+					return;
+				}
+			}
+		}
 		// 右键在"有工具条"和"只剩图"这两个状态之间来回切。
 		// 藏着的时候（上一次右键收起来的）就把它请回来。位置先重排一遍：
 		// 藏着的这段时间里窗口可能被 Ctrl+滚轮缩放过，工具条的落点跟着变了
 		if (!IsWindowVisible(toolMain->hwnd)) {
+			editTarget = nullptr;   // 重新请出工具条 = 回到"只编辑最后一个"
 			layoutTools();
 			toolMain->show();
 			return;
@@ -353,6 +376,7 @@ void WinPin::onDown(POINT pos, BOOL isRight)
 		// cancelSelect 里已经顺手隐藏了 ToolSub 并重排整组，但它在 curId 本来就空时会提前返回，
 		// 所以 ToolSub 这一下自己再收一次，右键的效果与当时选没选画笔无关。
 		// 左键点一下（抬手时，见 onUp）也能把 ToolMain 请回来
+		editTarget = nullptr;
 		toolMain->cancelSelect();
 		toolMain->hide();
 		toolSub->hideTools();
@@ -425,25 +449,34 @@ void WinPin::onMove(POINT pos)
 	else
 	{
 		if (toolMain->curId == L"") return;
-		// 只可编辑最后一个：只有最新那个 shape 的夹点能悬停/编辑，之前的全部锁定。
+		// 默认只可编辑最后一个：只有最新那个 shape 的夹点能悬停/编辑，之前的全部锁定。
 		// 想改前面的必须先回退（Ctrl+Z 撤销到它，它变回最新），改完再 Ctrl+Y 继续。
-		ShapeBase* last = nullptr;
-		for (int i{ (int)(history->shapes.size() - 1) }; i >= 0; i--) {
-			auto cur = history->shapes[i].get();
-			if (cur->isUndo) continue;
-			last = cur;
-			break;
+		// 右键点中某个更早的标注时把它解锁进 editTarget，那时它也能被悬停 / 编辑（与 WinCap 一致）
+		ShapeBase* hover = nullptr;
+		if (editTarget && !editTarget->isUndo) {
+			editTarget->mouseMove((float)imgPos.x, (float)imgPos.y);
+			if (editTarget->hoverDraggerIndex >= 0) hover = editTarget;
 		}
-		if (last) {
-			last->mouseMove((float)imgPos.x, (float)imgPos.y);
-			if (last->hoverDraggerIndex >= 0) {
-				if (shapeHover != last) {
-					shapeHover = last;
-					setTimer(800, 100);
-					refresh();
-				}
-				return;
+		if (!hover) {
+			ShapeBase* last = nullptr;
+			for (int i{ (int)(history->shapes.size() - 1) }; i >= 0; i--) {
+				auto cur = history->shapes[i].get();
+				if (cur->isUndo) continue;
+				last = cur;
+				break;
 			}
+			if (last) {
+				last->mouseMove((float)imgPos.x, (float)imgPos.y);
+				if (last->hoverDraggerIndex >= 0) hover = last;
+			}
+		}
+		if (hover) {
+			if (shapeHover != hover) {
+				shapeHover = hover;
+				setTimer(800, 100);
+				refresh();
+			}
+			return;
 		}
 		if (shapeHover) {
 			shapeHover = nullptr;
@@ -673,9 +706,12 @@ bool WinPin::getImagePixels(std::vector<BYTE>& pixels, D2D1_SIZE_U& size)
 	pixels.resize((size_t)rowBytes * size.height);
 	for (UINT32 row = 0; row < size.height; ++row)
 	{
-		CopyMemory(pixels.data() + (size_t)row * rowBytes,
-			mapped.bits + (size_t)row * mapped.pitch,
-			rowBytes);
+		auto dst = pixels.data() + (size_t)row * rowBytes;
+		CopyMemory(dst, mapped.bits + (size_t)row * mapped.pitch, rowBytes);
+		// target 位图是 PREMULTIPLIED，底图本身 alpha 可能是 0（GDI 抓屏 / 外部传入的
+		// 不含 alpha 的像素），画进去之后整张图都是半透明，PNG 和剪切板会当真。
+		// 导出的是成品图，统一按不透明补上 —— 与 WinCap::getImagePixels 保持一致
+		for (UINT32 i = 3; i < rowBytes; i += 4) dst[i] = 255;
 	}
 	cpuBmp->Unmap();
 	return true;

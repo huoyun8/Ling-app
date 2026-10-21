@@ -16,8 +16,4 @@ public:
 	static std::wstring getSaveFilePath(HWND hwnd, const std::wstring& ext = L"png");
 	// 以当前时间生成默认文件名，精确到毫秒，避免连续保存时重名
 	static std::wstring createFileName(const std::wstring& ext);
-	// GDI 抓屏。返回 BGRA、top-down、行紧凑（步长 = w*4），与本类其他函数的入参格式一致
-	static std::vector<BYTE> captureScreen(const int x, const int y, const int w, const int h);
-	// 把文件路径以 CF_HDROP 写进剪切板，粘贴到资源管理器/聊天窗口就是一个文件
-	static void addFileToClipboard(const std::wstring& filePath);
 };

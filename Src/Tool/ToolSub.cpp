@@ -103,8 +103,9 @@ void ToolSub::onCreated()
 // 切到某个工具时从里面读，用户一改就写回去，所以内存里不用再留一份每工具的状态。
 void ToolSub::beginTool(const std::wstring& id)
 {
-	// 按钮和滑块马上要被销毁，onLeave 不会触发，提示得手动收掉
-	tip->hide();
+	// 按钮和滑块马上要被销毁，onLeave 不会触发，提示得手动收掉。
+	// tip 要到 onCreated 才建得起来，构造期/建窗失败时这里是空的
+	if (tip) tip->hide();
 	contentNode->removeAllChildren();
 	fillBtn = nullptr;      // 填充开关按钮随子节点销毁
 	shapeRectBtn = nullptr;    // 形状单选按钮也随子节点销毁
@@ -515,7 +516,7 @@ bool ToolSub::hasContent()
 void ToolSub::hideTools()
 {
 	hasTools = false;
-	tip->hide();
+	if (tip) tip->hide();
 	if (!isVisible) return;
 	hide();
 	isVisible = false;
@@ -540,7 +541,12 @@ void ToolSub::updatePosition(const RECT& workArea)
 	// 箭头始终指向按钮中心的屏幕位置，换算成窗口内坐标
 	arrowX = mainX + btnCenterX - finalX;
 	setPosition(finalX, static_cast<int>(py));
-	if (isVisible) {
+	// 以窗口真实的可见状态为准，别只信 isVisible 这个镜像变量：
+	// 宿主可能在外面直接 hide() 过（比如 WinCap::restartSelect、右键收起工具条），
+	// 那样 isVisible 还是 true、窗口却已经藏起来了，这里就会跳过 show，工具条再也不出来
+	bool reallyVisible = hwnd && IsWindowVisible(hwnd);
+	if (reallyVisible) {
+		isVisible = true;
 		refresh();
 	}
 	else {

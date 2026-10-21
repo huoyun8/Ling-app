@@ -154,6 +154,11 @@ WinSettingShortcut::~WinSettingShortcut()
     win->onMouseDown.remove(onMouseDownToken);
     win->onKeyDown.remove(onKeyDownToken);
     win->onKeyUp.remove(onKeyUpToken);
+    // 三个 token 都摘掉了，窗口上不再有指向 this 的委托；但顺序上必须保证上面那三个
+    // remove 已经生效，否则窗口还会在 this 已经析构之后回调进来
+    onMouseDownToken = {};
+    onKeyDownToken = {};
+    onKeyUpToken = {};
 }
 
 void WinSettingShortcut::onBtnClick(Ling::Button* btn)
@@ -220,6 +225,12 @@ void WinSettingShortcut::onKeyDown(UINT key)
 void WinSettingShortcut::onKeyUp(UINT key)
 {
     if (curKey.empty()) return;
+    // 只按下了修饰键（Ctrl / Alt / Shift / Win）就松手：说明用户是在犹豫、或者只是想取消，
+    // 不是要设一个只有修饰键的快捷键。这里直接收掉，别让下半段把它当成一次合法的输入 ——
+    // 否则松 Ctrl 的那一刻就会走 isValidShortcutKeys 失败 → endCapture，看起来像是
+    // "点了按钮又按了 Ctrl 结果什么都没发生"，还要再点一次才能重新开始录制
+    auto keyStr = keyToStr(key);
+    if (isShortcutModifierKey(keyStr)) return;
     normalizeShortcutKeys(tempKeys);
     if (isValidShortcutKeys(tempKeys)) {
         Setting::get()->setShortcutKey(curKey, tempKeys);
@@ -237,6 +248,7 @@ std::wstring WinSettingShortcut::keyToStr(UINT vkCode)
     case VK_LWIN:    return L"LWin";
     case VK_RWIN:    return L"RWin";
     case VK_CAPITAL: return L"CapsLock";
+    case VK_APPS:    return L"Menu";
         // --- 功能键 (F1 - F12) ---
     case VK_F1: return L"F1";
     case VK_F2: return L"F2";

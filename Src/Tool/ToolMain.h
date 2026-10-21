@@ -7,7 +7,6 @@ class ToolMain : public Ling::WinBase
 public:
 	ToolMain(WinHost* win);
 	~ToolMain();
-	static void init();
 	float getBtnCenterX();
 	// 取消当前选中：清空 curId、把所有按钮恢复常态配色，并重排工具组（curId 空了 ToolSub 会隐藏）。
 	void cancelSelect();

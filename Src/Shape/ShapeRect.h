@@ -21,7 +21,10 @@ private:
 	// 而这之间已经可能来一次 paint（刷新时机不受控），不初始化就是拿垃圾值画矩形
 	D2D1_RECT_F rect{ 0,0,0,0 };
 	Microsoft::WRL::ComPtr<ID2D1SolidColorBrush> brush;
-	float strokeWidth, pressX, pressY;
+	// pressX/pressY 与 ShapeEllipse 一样给初值：rect 已经是 0,0,0,0，
+	// 万一在第一次 mouseDown 之前就被 mouseDrag / mouseWheel 碰到（刷新时机不受控），
+	// 拿未初始化的浮点数算 minmax 会画出一块飞到天外的矩形
+	float strokeWidth{ 1.f }, pressX{ 0.f }, pressY{ 0.f };
 	bool isFill{ false };
 };
 

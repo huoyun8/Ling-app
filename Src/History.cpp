@@ -78,6 +78,8 @@ ShapeBase* History::createShape(const std::wstring& state, const int& x, const i
 
 void History::undo()
 {
+    // 从后往前找第一个还没被撤销的。撤销后它在 vector 里的位置不变（isUndo = true），
+    // 所以 redo 只要"从后往前找第一个被撤销的"就能把它按相反顺序捡回来
     int i{ (int)(shapes.size() - 1) };
     for (; i >= 0; i--)
     {
@@ -98,7 +100,9 @@ void History::undo()
 
 void History::redo()
 {
-    for (size_t i = 0; i < shapes.size(); i++)
+    // 必须从后往前找：撤销是从尾部开始的，所以最后被撤销的那个在 vector 里位置最靠后。
+    // 从前往后找会跳过它、去恢复一个更早被撤销的元素，连按 Ctrl+Z / Ctrl+Y 的顺序就乱了
+    for (int i{ (int)shapes.size() - 1 }; i >= 0; i--)
     {
         auto cur = shapes[i].get();
         if (cur->isUndo) {

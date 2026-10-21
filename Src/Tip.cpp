@@ -47,6 +47,15 @@ Tip::~Tip()
 {
 	win->onTimer.remove(timerTok);
 	if (owner) win->killTimer(timerId);
+	// 把还挂在按钮上的订阅逐个摘掉。按钮本身可能已经随 ToolSub 重建被销毁了，
+	// 所以只在 btn 还在的时候 remove —— 已销毁的按钮那些订阅本来就随节点一起没了，
+	// 这里只是别让 winrt::event 那边留着指向野对象的委托
+	for (auto& bound : boundBtns) {
+		if (!bound.btn) continue;
+		bound.btn->onEnter.remove(bound.enterTok);
+		bound.btn->onLeave.remove(bound.leaveTok);
+	}
+	boundBtns.clear();
 	if (tipHwnd && IsWindow(tipHwnd)) {
 		DestroyWindow(tipHwnd);
 	}
@@ -54,9 +63,13 @@ Tip::~Tip()
 
 void Tip::bind(Ling::Button* btn, const std::wstring& text)
 {
-	// btn 挂在宿主窗口的节点树上，与 Tip 同生死（都随窗口销毁），捕获裸指针安全
-	btn->onEnter.add([this, text](Ling::Button* b) { showAbove(b, text); });
-	btn->onLeave.add([this](Ling::Button* b) { hide(b); });
+	if (!btn) return;
+	// btn 挂在宿主窗口的节点树上，与 Tip 同生死（都随窗口销毁），捕获裸指针安全。
+	// 订阅 token 记下来，Tip 析构时好摘 —— 否则 event 里会留着指向已释放 Tip 的委托
+	BoundBtn bound{ btn };
+	bound.enterTok = btn->onEnter.add([this, text](Ling::Button* b) { showAbove(b, text); });
+	bound.leaveTok = btn->onLeave.add([this](Ling::Button* b) { hide(b); });
+	boundBtns.push_back(bound);
 }
 
 void Tip::showAbove(Ling::Node* owner, const std::wstring& text)
