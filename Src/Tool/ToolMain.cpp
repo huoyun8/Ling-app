@@ -28,8 +28,9 @@ ToolMain::ToolMain(WinHost* win) : Ling::WinBase(), win(win)
 			refreshSize();                    //宿主的摆放规则要用宽高，先按新 dpi 把尺寸定下来
 			this->win->layoutTools();
 		}
-		// 自绘图钉图标：DPI 变化后尺寸才就绪，顺手补绘一次
+		// 自绘图标：DPI 变化后尺寸才就绪，顺手补绘一次
 		if (pinCanvas) drawPinIcon();
+		if (rectIconCanvas) drawRectCompoundIcon();
 	});
 	createNativeWindow(WS_EX_TOPMOST | WS_EX_TOOLWINDOW, WS_POPUP);
 }
@@ -75,7 +76,8 @@ float ToolMain::getBtnCenterX()
 	return result;
 }
 
-// 主工具图标随填充状态切换：btnIds 含分隔符而 btns 不含，逐项对齐下标
+// 主工具图标随填充状态切换：箭头/序号在空心/实心字形间切换。
+// 矩形已改为自绘"空心矩形+空心椭圆"交叠图标（见 drawRectCompoundIcon），不在这里切字形。
 void ToolMain::updateShapeIcon()
 {
 	if (!win || !win->toolSub) return;
@@ -87,8 +89,6 @@ void ToolMain::updateShapeIcon()
 			++bi;
 		}
 	};
-	setBtn(L"rect",    win->toolSub->isRectFill    ? L"\ue602" : L"\ue8e8");
-	setBtn(L"ellipse", win->toolSub->isEllipseFill ? L"\ue600" : L"\ue6bc");
 	setBtn(L"arrow",   win->toolSub->isArrowFill   ? L"\ue604" : L"\ue603");
 	setBtn(L"number",  win->toolSub->isNumberFill  ? L"\ue605" : L"\ue776");
 }
@@ -140,10 +140,23 @@ void ToolMain::onCreated()
 		pinCanvas = cv;
 		break;
 	}
-	// 初始图标按填充状态摆对（箭头/序号默认实心，矩形/椭圆默认空心）
+	// 矩形按钮：矩形/椭圆已合并，主图标换成"空心矩形+空心椭圆交叠"自绘图形
+	for (auto b : btns) {
+		if (b->id != L"rect") continue;
+		b->setText(L"");
+		auto cv = b->makeChild<Ling::Canvas>();
+		cv->setPositionType(Ling::Position::Absolute);
+		cv->setPosition(Ling::Edge::Left, 0.f);
+		cv->setPosition(Ling::Edge::Top, 0.f);
+		cv->setSizePercent(100.f, 100.f);
+		rectIconCanvas = cv;
+		break;
+	}
+	// 初始图标按填充状态摆对（箭头/序号默认实心）
 	updateShapeIcon();
-	// 图钉：尺寸可能还没就绪，先画一次，后续 onSizeChanged 会补绘
+	// 自绘图标：尺寸可能还没就绪，先画一次，后续 onSizeChanged 会补绘
 	if (pinCanvas) drawPinIcon();
+	if (rectIconCanvas) drawRectCompoundIcon();
 	show();
 }
 
@@ -180,6 +193,29 @@ void ToolMain::drawPinIcon()
 	sink->Close();
 	ctx->FillGeometry(path.Get(), b.Get());
 	pinCanvas->finishPaint();
+}
+
+// "空心矩形+空心椭圆"交叠图标（矩形/椭圆合并后的主图标，风格与 iconfont 图标一致）
+void ToolMain::drawRectCompoundIcon()
+{
+	if (!rectIconCanvas) return;
+	auto ctx = rectIconCanvas->startPaint();
+	if (!ctx) return;
+	float w = rectIconCanvas->w, h = rectIconCanvas->h;
+	if (w <= 0.f || h <= 0.f) return;
+	ctx->Clear(D2D1::ColorF(0, 0.0f));
+	auto d2d = Ling::D2D::get();
+	Microsoft::WRL::ComPtr<ID2D1SolidColorBrush> b;
+	ctx->CreateSolidColorBrush(D2D1::ColorF(0x333333FF), b.GetAddressOf());
+	float cx = w / 2.f, cy = h / 2.f;
+	float s = std::min(w, h) * 0.26f;
+	// 空心矩形（偏左）
+	D2D1_RECT_F rc{ cx - s * 0.62f, cy - s * 0.72f, cx + s * 0.42f, cy + s * 0.72f };
+	ctx->DrawRectangle(rc, b.Get(), 1.5f);
+	// 空心椭圆（偏右，与矩形交叠）
+	D2D1_ELLIPSE el{ D2D1::Point2F(cx + s * 0.40f, cy), s * 0.50f, s * 0.68f };
+	ctx->DrawEllipse(el, b.Get(), 1.5f);
+	rectIconCanvas->finishPaint();
 }
 
 void ToolMain::applyNormalStyle(Ling::Button* btn)

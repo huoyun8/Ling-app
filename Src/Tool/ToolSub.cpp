@@ -36,6 +36,30 @@ namespace {
 		}
 		return nullptr;
 	}
+
+	// ---------- 自绘开关图标（不依赖 iconfont 字形，线条/尺寸与其他图标保持一致） ----------
+	// 矩形：实心填充 / 空心描边
+	void drawRectIcon(ID2D1DeviceContext* ctx, float w, float h, bool solid)
+	{
+		Microsoft::WRL::ComPtr<ID2D1SolidColorBrush> b;
+		ctx->CreateSolidColorBrush(D2D1::ColorF(0x333333FF), b.GetAddressOf());
+		float cx = w / 2.f, cy = h / 2.f;
+		float s = std::min(w, h) * 0.56f;
+		D2D1_RECT_F rc{ cx - s / 2.f, cy - s / 2.f, cx + s / 2.f, cy + s / 2.f };
+		if (solid) ctx->FillRectangle(rc, b.Get());
+		else ctx->DrawRectangle(rc, b.Get(), 1.5f);
+	}
+	// 椭圆：实心填充 / 空心描边
+	void drawEllipseIcon(ID2D1DeviceContext* ctx, float w, float h, bool solid)
+	{
+		Microsoft::WRL::ComPtr<ID2D1SolidColorBrush> b;
+		ctx->CreateSolidColorBrush(D2D1::ColorF(0x333333FF), b.GetAddressOf());
+		float cx = w / 2.f, cy = h / 2.f;
+		float rx = std::min(w, h) * 0.32f;
+		D2D1_ELLIPSE el{ D2D1::Point2F(cx, cy), rx, rx };
+		if (solid) ctx->FillEllipse(el, b.Get());
+		else ctx->DrawEllipse(el, b.Get(), 1.5f);
+	}
 }
 
 ToolSub::ToolSub(WinHost* win) :Ling::WinBase(), win(win)
@@ -108,6 +132,8 @@ void ToolSub::beginTool(const std::wstring& id)
 	tip->hide();
 	contentNode->removeAllChildren();
 	lastToolCanvasDraw = {};   // 自绘画布随子节点销毁，清掉引用避免悬空
+	shapeRectBtn = nullptr;    // 形状单选按钮也随子节点销毁
+	shapeEllBtn = nullptr;
 	curToolId = id;
 	auto cfg = findSliderCfg(id);
 	if (!cfg) return;
@@ -125,22 +151,60 @@ void ToolSub::beginTool(const std::wstring& id)
 
 void ToolSub::showRectTools()
 {
+	// 矩形/椭圆已合并成一个工具：第1键=填充开关(图标随形状+实心/空心联动)，
+	// 第2键=空心矩形(选矩形)，第3键=空心椭圆(选椭圆)
 	beginTool(L"rect");
-	initSize(1, true);
-	// 填充开关：开=实心矩形，关=空心矩形（图标随状态切换）
-	makeToggleBtn(L"\ue602", L"\ue8e8", &isRectFill, L"tool.rectFill", L"fill");
+	initSize(3, true);
+	// 第1个：填充开关（实心/空心），图标随当前形状变
+	makeCanvasToggleBtn(&isRectFill, L"tool.rectFill", L"fill",
+		[this](ID2D1DeviceContext* ctx, float w, float h, bool solid) {
+			if (isEllipseShape) drawEllipseIcon(ctx, w, h, solid);
+			else drawRectIcon(ctx, w, h, solid);
+		});
+	// 第2/3个：空心矩形 / 空心椭圆 —— 单选形状
+	shapeRectBtn = makeShapeSelectBtn(false, L"\ue8e8", L"tool.rectFill");
+	shapeEllBtn = makeShapeSelectBtn(true, L"\ue6bc", L"tool.ellipseFill");
+	syncShapeSelect();
 	initSlider();
 	initColorBtns();
 }
 
+// 形状单选按钮：点击把 isEllipseShape 设为 value 并刷新选中态
+Ling::Button* ToolSub::makeShapeSelectBtn(bool value, const std::wstring& glyph, const std::wstring& tipKey)
+{
+	auto btn = contentNode->makeChild<Ling::Button>();
+	btn->setText(glyph);
+	btn->setHeight(btnSize - 2.5);
+	btn->setFlexGrow(1.f);
+	btn->setFontFamily(L"icon");
+	btn->setFontSize(13.f);
+	tip->bind(btn, Lang::get(tipKey));
+	btn->onClick.add([this, value](Ling::Button* b) {
+		isEllipseShape = value;
+		syncShapeSelect();
+	});
+	return btn;
+}
+
+// 按当前形状点亮对应的形状按钮，并重绘填充图标（填充图标要随形状变）
+void ToolSub::syncShapeSelect()
+{
+	if (shapeRectBtn) {
+		shapeRectBtn->setBg(isEllipseShape ? 0 : 0xe6f4ffff);
+		shapeRectBtn->setHoverBg(isEllipseShape ? 0xF2F2F2ff : 0xe6f4ffff);
+	}
+	if (shapeEllBtn) {
+		shapeEllBtn->setBg(isEllipseShape ? 0xe6f4ffff : 0);
+		shapeEllBtn->setHoverBg(isEllipseShape ? 0xe6f4ffff : 0xF2F2F2ff);
+	}
+	// 填充图标随形状变：重绘自绘填充按钮
+	if (lastToolCanvasDraw) lastToolCanvasDraw();
+}
+
 void ToolSub::showEllipseTools()
 {
-	beginTool(L"ellipse");
-	initSize(1, true);
-	// 填充开关：开=实心椭圆，关=空心椭圆
-	makeToggleBtn(L"\ue600", L"\ue6bc", &isEllipseFill, L"tool.ellipseFill", L"fill");
-	initSlider();
-	initColorBtns();
+	// 矩形/椭圆已合并，椭圆走 showRectTools；此函数保留避免历史分支悬空
+	showRectTools();
 }
 
 void ToolSub::showArrowTools()

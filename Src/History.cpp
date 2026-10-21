@@ -28,11 +28,20 @@ ShapeBase* History::createShape(const std::wstring& state, const int& x, const i
     ShapeBase* result{nullptr};
     auto toolMain = win->toolMain.get();
     if (toolMain->curId == L"rect") {
-        auto shape = std::make_unique<ShapeRect>(win);
-        result = shape.get();
-        shapes.push_back(std::move(shape));
+        // 矩形/椭圆已合并：按副编辑器的形状单选（isEllipseShape）决定画矩形还是椭圆
+        if (win->toolSub->isEllipseShape) {
+            auto shape = std::make_unique<ShapeEllipse>(win);
+            result = shape.get();
+            shapes.push_back(std::move(shape));
+        }
+        else {
+            auto shape = std::make_unique<ShapeRect>(win);
+            result = shape.get();
+            shapes.push_back(std::move(shape));
+        }
     }
     else if (toolMain->curId == L"ellipse") {
+        // 独立椭圆工具已并入矩形，此分支保留防历史调用
         auto shape = std::make_unique<ShapeEllipse>(win);
         result = shape.get();
         shapes.push_back(std::move(shape));

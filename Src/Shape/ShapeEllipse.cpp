@@ -18,7 +18,7 @@ ShapeEllipse::ShapeEllipse(WinHost* win) :ShapeBase(win), draggers{
 	auto d2d = Ling::D2D::get();
 	d2d->deviceContext->CreateSolidColorBrush(toolSub->getSelectedColor(), brush.GetAddressOf());
 	strokeWidth = toolSub->getSliderVal();
-	isFill = toolSub->isEllipseFill;
+	isFill = toolSub->isRectFill;   // 矩形/椭圆已合并，共用 isRectFill 作为填充开关
 }
 
 ShapeEllipse::~ShapeEllipse()
@@ -250,7 +250,7 @@ void ShapeEllipse::mouseWheel(const float x, const float y, const short delta)
 {
 	if (isFill) return;
 	auto next = strokeWidth + (delta < 0 ? -win->dpi : win->dpi);
-	auto applied = win->toolSub->setShapeSliderVal(L"ellipse", next);
+	auto applied = win->toolSub->setShapeSliderVal(L"rect", next);   // 矩形/椭圆已合并，共用 rect 的滑块配置
 	if (applied == strokeWidth) return;
 	strokeWidth = applied;
 	win->refresh();

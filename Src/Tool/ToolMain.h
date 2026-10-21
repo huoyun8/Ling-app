@@ -25,6 +25,8 @@ private:
 	void refreshSize();
 	// 把实心图钉画到 pinCanvas 上（布局/DPI 变化后尺寸就绪时调用）
 	void drawPinIcon();
+	// 把"空心矩形+空心椭圆交叠"图形画到 rectIconCanvas 上（矩形/椭圆合并后的主图标）
+	void drawRectCompoundIcon();
 private:
 	WinHost* win;
 	// onDpiChanged 与 onSizeChanged 之间的接力标记，见构造函数里的注释
@@ -32,12 +34,14 @@ private:
 	// 逻辑像素，交给 Ling 的 setter 时由其内部乘 dpi
 	static constexpr float btnSize{ 32.f };
 	static constexpr float spliterW{ 1.f };
-	std::vector<std::wstring> btnIds = { L"rect",L"ellipse",L"arrow",L"number",L"line",L"text",L"mosaic", L"eraser",L"|",L"undo",L"redo",L"|",L"close",L"pin",L"save",L"clipboard" };
-	std::vector<std::wstring> btnCodes = { L"\ue8e8",L"\ue6bc",L"\ue603",L"\ue776",L"\ue601",L"\ue6ec",L"\ue82e",L"\ue6be",L"|",L"\ued85",L"\ued8a",L"|",L"\ue62d",L"\ue6a2",L"\ue608",L"\ue6ad" };
+	std::vector<std::wstring> btnIds = { L"rect",L"arrow",L"number",L"line",L"text",L"mosaic", L"eraser",L"|",L"undo",L"redo",L"|",L"close",L"pin",L"save",L"clipboard" };
+	std::vector<std::wstring> btnCodes = { L"\ue8e8",L"\ue603",L"\ue776",L"\ue601",L"\ue6ec",L"\ue82e",L"\ue6be",L"|",L"\ued85",L"\ued8a",L"|",L"\ue62d",L"\ue6a2",L"\ue608",L"\ue6ad" };
 	std::vector<Ling::Button*> btns;
 	// 悬停提示。要 hwnd，所以在 onCreated 里才建得起来
 	std::unique_ptr<Tip> tip;
 	// 图钉按钮的自绘画布（iconfont 没有实心图钉字形，用 Canvas 画一个实心图钉）
 	Ling::Canvas* pinCanvas{ nullptr };
+	// 矩形按钮的自绘画布：矩形/椭圆已合并，主图标画"空心矩形+空心椭圆交叠"图形
+	Ling::Canvas* rectIconCanvas{ nullptr };
 };
 

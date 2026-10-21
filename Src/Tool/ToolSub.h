@@ -39,7 +39,8 @@ public:
 	// ToolMain 与 ToolSub 之间的间距，WinHost::layoutTools() 计算整组高度时要用
 	static constexpr float mainGap{ 2.f };
 public:
-	bool isRectFill{ false }, isEllipseFill{ false }, isArrowFill{ true }, isNumberFill{ true }, isLineTransparent{ false }, isTextBold{ false }, isTextItalic{ false }, isMosaicBlur{ false }, isMosaicRect{ true }, isEraserRect{ true };
+	// isEllipseShape：矩形工具当前画的是椭圆(true)还是矩形(false)。矩形/椭圆已合并成一个工具。
+	bool isRectFill{ false }, isEllipseShape{ false }, isEllipseFill{ false }, isArrowFill{ true }, isNumberFill{ true }, isLineTransparent{ false }, isTextBold{ false }, isTextItalic{ false }, isMosaicBlur{ false }, isMosaicRect{ true }, isEraserRect{ true };
 private:
 	void onCreated() override;
 	void layout() override;
@@ -61,6 +62,11 @@ private:
 	// 状态翻转时重绘图标；内容节点重建后由 layout() 在尺寸就绪时补绘一次（首帧 / DPI 变化）。
 	Ling::Button* makeCanvasToggleBtn(bool* flag, const std::wstring& tipKey, const std::wstring& cfgKey,
 		std::function<void(ID2D1DeviceContext*, float, float, bool)> draw);
+	// 形状单选按钮（矩形工具里的"空心矩形/空心椭圆"）：点击把 isEllipseShape 设为 value，
+	// 并刷新两个形状按钮的选中配色与填充图标。value=false 选矩形，true 选椭圆。
+	Ling::Button* makeShapeSelectBtn(bool value, const std::wstring& glyph, const std::wstring& tipKey);
+	// 按 isEllipseShape 点亮对应的形状按钮，并重绘填充图标（填充图标要随形状变）
+	void syncShapeSelect();
 	// 每个 show*Tools 开头都要做的事：收提示、清旧内容、记下当前工具，
 	// 再把这个工具存在 config.json 里的滑块值和颜色读回来（读不到就用默认值 / 第一个颜色）。
 	// 滑块的键名与值域查 .cpp 里那张表，id 必须是表里有的（就是 ToolMain 的按钮 id）。
@@ -111,6 +117,8 @@ private:
 	// 最近一次自绘开关的补绘回调：捕获了对应 flag 的指针，layout() 尺寸就绪后调用。
 	// 内容节点每次重建（切工具）都会销毁旧画布，beginTool 里要清空它，避免悬空。
 	std::function<void()> lastToolCanvasDraw;
+	// 矩形工具的两个形状单选按钮（空心矩形 / 空心椭圆），syncShapeSelect 用来点亮选中态
+	Ling::Button* shapeRectBtn{ nullptr }, * shapeEllBtn{ nullptr };
 	// 序号半径的取值范围（逻辑像素）。下限跟着 ShapeNumber 拖拽/滚轮的下限走，
 	// 上限给滑块留个头 —— 再大就超出滑块能表达的范围了，拖拽仍可继续放大，只是不再回写
 	static constexpr float numberMin{ 6.f }, numberMax{ 86.f };
