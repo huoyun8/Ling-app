@@ -146,6 +146,10 @@ void ToolSub::showRectTools()
 		updateFillIcon();
 	});
 	updateFillIcon();
+	// 分隔条：填充开关 与 后面的形状选择 之间
+	auto sep = contentNode->makeChild<Ling::Node>();
+	sep->setSize(dpi, 18.f);
+	sep->setBg(0xDDDDDDff);
 	// 第2/3个：空心矩形 / 空心椭圆 —— 单选形状
 	shapeRectBtn = makeShapeSelectBtn(false, L"\ue8e8", L"tool.rectFill");
 	shapeEllBtn = makeShapeSelectBtn(true, L"\ue6bc", L"tool.ellipseFill");
