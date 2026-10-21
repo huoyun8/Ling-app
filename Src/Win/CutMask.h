@@ -31,6 +31,10 @@ public:
 	float strokeWidth{ 2.f };
 	// 选区定死之后（录屏 / 滚动截图）标签就没用了，而它可能压在选区内部被录进去
 	bool hideLabel{ false };
+	// 悬停智能吸附开关。默认开：光标移动时自动吸附到窗口 / 控件。
+	// 选框时点右键 = 回到纯手动十字状态，临时关闭吸附（避免鼠标一动又吸到某个界面），
+	// 用户手动拖出选区后再恢复
+	bool autoSnap{ true };
 private:
 	void initWinRect();
 	// 尺寸标签只在 maskRect 变化时重建，不必每帧现建

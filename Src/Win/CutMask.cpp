@@ -20,6 +20,8 @@ CutMask::CutMask(Ling::WinBase* win) :win{ win }
 
 bool CutMask::highlight(POINT pos)
 {
+	// 右键进入手动十字模式后临时关闭悬停吸附，直到用户手动拖出选区
+	if (!autoSnap) return false;
 	// 智能识别：在识别表里找"包含光标的最小矩形"（越深层的子控件面积越小，越具体），
 	// 于是光标悬停在按钮上就吸到按钮、悬停在面板上就吸到面板、悬停在窗口上就吸到窗口
 	float bestArea{ FLT_MAX };

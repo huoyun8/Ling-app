@@ -397,10 +397,12 @@ LRESULT WinCap::onHitTest(const POINT pos)
 void WinCap::onDown(POINT pos, bool isRight)
 {
     if (isRight) {
-        // Select 阶段点右键：清掉当前选区重新选择
+        // Select 阶段点右键：回到最初十字手动状态 —— 清空选区并临时关闭悬停吸附，
+        // 避免鼠标一动又自动吸到某个界面 / 整屏窗口
         if (stage == CapStage::Select) {
             isPress = false;
             cutMask->reset();
+            cutMask->autoSnap = false;
             return;
         }
         if (stage == CapStage::Adjust) {
@@ -488,6 +490,8 @@ void WinCap::onDown(POINT pos, bool isRight)
         return;
     }
     if (stage == CapStage::Select) {
+        // 开始手动拖动框选区：恢复智能吸附（右键手动模式到此结束）
+        cutMask->autoSnap = true;
         isPress = true;
         cutMask->startMakeRect(pos);
     }
