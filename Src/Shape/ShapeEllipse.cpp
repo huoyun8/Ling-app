@@ -54,6 +54,8 @@ void ShapeEllipse::mouseDrag(const float x, const float y)
 		rect.right = right;
 		rect.top = top;
 		rect.bottom = bottom;
+		// 椭圆最小尺寸 2px：拖出的小于 2 的按中心扩到 2
+		enforceMinSize(rect);
 		cx = (rect.left + rect.right) / 2.f;
 		cy = (rect.top + rect.bottom) / 2.f;
 		rx = (rect.right - rect.left) / 2.f;

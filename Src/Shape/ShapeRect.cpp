@@ -53,6 +53,8 @@ void ShapeRect::mouseDrag(const float x, const float y)
 		rect.right = right;
 		rect.top = top;
 		rect.bottom = bottom;
+		// 矩形最小尺寸 2px：拖出的小于 2 的按中心扩到 2
+		enforceMinSize(rect);
 	}
 	else if (hoverDraggerIndex == 1 || hoverDraggerIndex == 5) {
 		auto [top, bottom] = std::minmax(pressY, y);

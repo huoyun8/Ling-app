@@ -25,6 +25,8 @@ public:
 protected:
 protected:
 	float draggerSize;
+	// 矩形/椭圆等形状的最小尺寸钳制：宽高小于 2px 时按中心扩到 2px
+	void enforceMinSize(D2D1_RECT_F& r);
 	Microsoft::WRL::ComPtr<ID2D1SolidColorBrush> brushDragger;
 private:
 };
