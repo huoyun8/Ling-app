@@ -127,10 +127,10 @@ void WinCap::layout()
         {
             if (!shape->isUndo) shape->paint(ctx);
         }
-        // 悬停：2px 细线框；选中编辑（按下）时再叠加 8 个小方块
+        // 悬停（未按下）：2px 细线框；编辑中（按下/拖画）：只显示 8 个小方块，不套黑框
         if (shapeHover) {
-            shapeHover->paintHoverFrame(ctx);
             if (isMouseDown) shapeHover->paintDragger(ctx);
+            else shapeHover->paintHoverFrame(ctx);
         }
     }
     // 压暗层 + 选区边框 + 尺寸标签画在标注之上：橡皮擦恢复底图时只会擦掉标注，
