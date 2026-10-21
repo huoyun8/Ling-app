@@ -400,22 +400,12 @@ LRESULT WinCap::onHitTest(const POINT pos)
 void WinCap::onDown(POINT pos, bool isRight)
 {
     if (isRight) {
-        // Select 阶段点右键 = 等同快捷键重进选区：清空选区并恢复智能吸附，
-        // 回到"按快捷键首次进入"的初始十字状态（悬停重新正常智能选取）
-        if (stage == CapStage::Select) {
-            isPress = false;
-            cutMask->reset();
-            cutMask->autoSnap = true;
-            // 十字光标跟到当前鼠标，完全复刻快捷键首次进入的初始状态
-            POINT cur; GetCursorPos(&cur);
-            ScreenToClient(hwnd, &cur);
-            setPixPos(cur);
-            getPixImg(cur);
-            return;
-        }
-        if (stage == CapStage::Adjust) {
-            // 编辑状态右键 = 选中编辑：点中某个已有标注就解锁它（越过"只编辑最后一个"），
-            // 让它可被直接拖动 / 修改
+        // 右键 = 统一动作：重新选择截图区域（回到十字手动选区，不智能吸附）。
+        // 唯一边界：有副编辑器（选中了工具，进入编辑）→ 四周锁定，不再重新选区。
+        const bool editing = (stage == CapStage::Adjust)
+            && toolMain && !toolMain->curId.empty();
+        if (editing) {
+            // 已进入编辑：点中已有标注则选中它便于直接编辑；否则什么都不做（锁定）
             auto imgPos = toImgPos(pos);
             for (int i{ (int)history->shapes.size() - 1 }; i >= 0; i--) {
                 auto cur = history->shapes[i].get();
@@ -428,40 +418,37 @@ void WinCap::onDown(POINT pos, bool isRight)
                     return;
                 }
             }
-            // 右键点空白：只有还没画过任何标注时才允许回到重新选区；
-            // 一旦画了圆 / 矩形等标注，选框就已结束，后续都是编辑器的活，禁止二次选框
-            if (!history->shapes.empty()) return;
-            // 空白处且没画过标注：收掉正在进行的标注（画到一半的形状 / 编辑中的文字 / 工具条），
-            // 重置选区回到 Select 重新框选，并清掉右键解锁目标
-            editTarget = nullptr;
-            if (editingText && textBox) {
-                textBox->hide();
-                editingText = nullptr;
-            }
-            if (isMouseDown) {
-                isMouseDown = false;
-                ReleaseCapture();
-                if (newShape) {
-                    history->removeShape(newShape);  // 丢掉这次按下画到一半的新形状
-                }
-            }
-            newShape = nullptr;
-            shapeHover = nullptr;
-            hasDragged = false;
-            if (toolMain) toolMain->hide();
-            if (toolSub) toolSub->hideTools();
-            cutMask->reset();
-            cutMask->autoSnap = true;   // 等同快捷键重进选区：恢复智能吸附
-            stage = CapStage::Select;
-            // 十字光标跟到当前鼠标，完全复刻快捷键首次进入的初始状态
-            POINT cur; GetCursorPos(&cur);
-            ScreenToClient(hwnd, &cur);
-            setPixPos(cur);
-            getPixImg(cur);
-            refresh();
             return;
         }
-        close();
+        // 重新选择截图区域：收掉进行中的工具/文字，清空选区与标注，回到十字手动状态（不智能吸附）
+        editTarget = nullptr;
+        if (editingText && textBox) {
+            textBox->hide();
+            editingText = nullptr;
+        }
+        if (isMouseDown) {
+            isMouseDown = false;
+            ReleaseCapture();
+            if (newShape) {
+                history->removeShape(newShape);
+            }
+        }
+        newShape = nullptr;
+        shapeHover = nullptr;
+        hasDragged = false;
+        if (toolMain) toolMain->hide();
+        if (toolSub) toolSub->hideTools();
+        if (history) history->shapes.clear();
+        isPress = false;
+        cutMask->reset();
+        cutMask->autoSnap = false;   // 十字手动，不智能吸附
+        stage = CapStage::Select;
+        // 十字光标跟到当前鼠标
+        POINT cur; GetCursorPos(&cur);
+        ScreenToClient(hwnd, &cur);
+        setPixPos(cur);
+        getPixImg(cur);
+        refresh();
         return;
     }
     // 编辑文本时，落在文本框里的点击整个交给 TextBox
