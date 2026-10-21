@@ -5,8 +5,8 @@
 ShapeBase::ShapeBase(WinHost* win):win{win}, draggerSize{6*win->dpi}
 {
 	auto d2d = Ling::D2D::get();
-	// 控制点小方块描边：红色
-	d2d->deviceContext->CreateSolidColorBrush(D2D1::ColorF(0xFF0000), brushDragger.GetAddressOf());
+	// 控制点小方块描边：醒目的半透明蓝
+	d2d->deviceContext->CreateSolidColorBrush(D2D1::ColorF(0.28f, 0.62f, 1.0f, 0.95f), brushDragger.GetAddressOf());
 }
 
 ShapeBase::~ShapeBase()

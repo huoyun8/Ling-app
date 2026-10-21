@@ -772,6 +772,8 @@ void WinCap::layoutTools()
 void WinCap::onToolStyleChanged()
 {
     if (editingText) editingText->applyStyle();
+    // 填充开关等样式变化：主工具图标随空心/实心切换
+    if (toolMain) toolMain->updateShapeIcon();
     // 马赛克高斯模糊：滑动条一动，最后编辑的那个模糊形状立刻按新强度重建显现
     if (history && !history->shapes.empty()) {
         for (int i = (int)history->shapes.size() - 1; i >= 0; --i) {

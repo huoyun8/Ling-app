@@ -42,6 +42,9 @@ ToolSub::ToolSub(WinHost* win) :Ling::WinBase(), win(win)
 {
 	// 跟着宿主窗口的缩放走：WinBase 构造里取的是系统 dpi，WinHost 可能在另一块缩放比例不同的屏上
 	dpi = win->dpi;
+	// 点按钮/滑块会把 ToolSub 激活，此后键盘消息进的是它而不是 WinHost。
+	// 直接把按键转触给 WinHost 的同名事件，否则焦点在副编辑器时 ESC 等快捷键会失效
+	onKeyDown.add([this](UINT key) { this->win->onKeyDown(key); });
 	// DPI 变了（工具条被挪到缩放比例不同的显示器上，或者用户改了系统缩放）：
 	// Ling 只会把窗口按系统给的建议矩形整体缩放一遍，我们自己定的那套摆放规则不会重跑，
 	// 工具条就歪在别处了。位置也不能在 onDpiChanged 里直接改 —— 那个事件在 Ling 应用建议矩形

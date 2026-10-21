@@ -72,9 +72,26 @@ float ToolMain::getBtnCenterX()
 	return result;
 }
 
-void ToolMain::onCreated()
+// 主工具图标随填充状态切换：btnIds 含分隔符而 btns 不含，逐项对齐下标
+void ToolMain::updateShapeIcon()
 {
-	tip = std::make_unique<Tip>(this);
+	if (!win || !win->toolSub) return;
+	auto setBtn = [this](const std::wstring& id, const std::wstring& glyph) {
+		size_t bi{ 0 };
+		for (size_t i = 0; i < btnIds.size(); ++i) {
+			if (btnIds[i] == L"|") continue;
+			if (btnIds[i] == id) { btns[bi]->setText(glyph); return; }
+			++bi;
+		}
+	};
+	setBtn(L"rect",    win->toolSub->isRectFill    ? L"\ue602" : L"\ue8e8");
+	setBtn(L"ellipse", win->toolSub->isEllipseFill ? L"\ue600" : L"\ue6bc");
+	setBtn(L"arrow",   win->toolSub->isArrowFill   ? L"\ue604" : L"\ue603");
+	setBtn(L"number",  win->toolSub->isNumberFill  ? L"\ue605" : L"\ue776");
+}
+
+void ToolMain::onCreated()
+{	tip = std::make_unique<Tip>(this);
 	body->setBg(0xFFFFFFFF);
 	body->setBorder(1.f, 0xA8A8A8ff);
 	body->setAlignItems(Ling::Align::Center);
@@ -101,6 +118,8 @@ void ToolMain::onCreated()
 			btns.push_back(btn);
 		}
 	}
+	// 初始图标按填充状态摆对（箭头/序号默认实心，矩形/椭圆默认空心）
+	updateShapeIcon();
 	show();
 }
 
@@ -203,6 +222,8 @@ void ToolMain::onClick(Ling::Button* btn)
 	else {
 		win->toolSub->hideTools();
 	}
+	// 主工具图标按当前填充状态摆对（空心/实心）
+	updateShapeIcon();
 	// curId 变化后 ToolMain 可能要上移给 ToolSub 腾位置，交给 WinHost 重新排布整组
 	win->layoutTools();
 }
