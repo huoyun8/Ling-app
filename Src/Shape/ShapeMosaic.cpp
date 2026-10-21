@@ -383,7 +383,9 @@ ComPtr<ID2D1Bitmap> ShapeMosaic::createMosaicBitmap(int blockSize)
 	// 往外扩一圈，避免边缘那一列取样不足；模糊模式按模糊半径扩（要留出糊开的余量），
 	// 色块模式按 blockSize 扩；再夹到窗口范围内
 	const int winW = (int)win->w, winH = (int)win->h;
-	int blurRadius = isBlur ? (int)std::clamp(strokeWidth * 0.4f, 2.f, 24.f) : 0;
+	// 模糊强度由"强度条"（马赛克滑块）直接决定：半径 = 滑块值 × 0.75，
+	// 低档隐约糊、高档重度糊；同时用模糊半径做区域外扩余量
+	int blurRadius = isBlur ? (int)std::clamp(strokeWidth * 0.75f, 6.f, 64.f) : 0;
 	int pad = isBlur ? blurRadius : blockSize;
 	int left = std::max(0, std::min((int)std::floor(bounds.left) - pad, winW));
 	int top = std::max(0, std::min((int)std::floor(bounds.top) - pad, winH));
