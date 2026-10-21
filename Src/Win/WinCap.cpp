@@ -400,12 +400,15 @@ LRESULT WinCap::onHitTest(const POINT pos)
 void WinCap::onDown(POINT pos, bool isRight)
 {
     if (isRight) {
-        // 右键 = 统一动作：重新选择截图区域（回到十字手动选区，不智能吸附）。
-        // 唯一边界：有副编辑器（选中了工具，进入编辑）→ 四周锁定，不再重新选区。
-        const bool editing = (stage == CapStage::Adjust)
-            && toolMain && !toolMain->curId.empty();
-        if (editing) {
-            // 已进入编辑：点中已有标注则选中它便于直接编辑；否则什么都不做（锁定）
+        // Select 阶段点右键 = 重新进入屏幕选区界面（和刚按完快捷键那一帧一样），
+        // 连吸附出来的虚线框一起清掉，回到纯手动的十字选框
+        if (stage == CapStage::Select) {
+            restartSelect();
+            return;
+        }
+        if (stage == CapStage::Adjust) {
+            // 编辑状态右键 = 选中编辑：点中某个已有标注就解锁它（越过"只编辑最后一个"），
+            // 让它可被直接拖动 / 修改
             auto imgPos = toImgPos(pos);
             for (int i{ (int)history->shapes.size() - 1 }; i >= 0; i--) {
                 auto cur = history->shapes[i].get();
@@ -418,37 +421,13 @@ void WinCap::onDown(POINT pos, bool isRight)
                     return;
                 }
             }
+            // 右键点在空白处 = 重新进入屏幕选区界面。
+            // 一旦画了圆 / 矩形等标注，选框就已结束，后续都是编辑器的活，禁止二次选框
+            if (!history->shapes.empty()) return;
+            restartSelect();
             return;
         }
-        // 重新选择截图区域：收掉进行中的工具/文字，清空选区与标注，回到十字手动状态（不智能吸附）
-        editTarget = nullptr;
-        if (editingText && textBox) {
-            textBox->hide();
-            editingText = nullptr;
-        }
-        if (isMouseDown) {
-            isMouseDown = false;
-            ReleaseCapture();
-            if (newShape) {
-                history->removeShape(newShape);
-            }
-        }
-        newShape = nullptr;
-        shapeHover = nullptr;
-        hasDragged = false;
-        if (toolMain) toolMain->hide();
-        if (toolSub) toolSub->hideTools();
-        if (history) history->shapes.clear();
-        isPress = false;
-        cutMask->reset();
-        cutMask->autoSnap = false;   // 十字手动，不智能吸附
-        stage = CapStage::Select;
-        // 十字光标跟到当前鼠标
-        POINT cur; GetCursorPos(&cur);
-        ScreenToClient(hwnd, &cur);
-        setPixPos(cur);
-        getPixImg(cur);
-        refresh();
+        close();
         return;
     }
     // 编辑文本时，落在文本框里的点击整个交给 TextBox
@@ -649,6 +628,48 @@ bool WinCap::enterByArg()
     return false;
 }
 
+// 把整个窗口退回"按快捷键首次进入"的屏幕选区界面：底图铺满、没有选区、没有工具条，
+// 十字光标 + 放大镜跟着鼠标，等用户重新拖框。
+// 与首次进入的唯一差别：智能吸附是关着的 —— 试用反馈里右键要的是"重新开始选框"，
+// 不是"跟着鼠标自动吸住某个窗口"，所以这次进来必须纯手动，拖出来的就是光标划过的那块。
+// 想恢复成和首次进入完全一致（含悬停自动识别窗口），把下面的 autoSnap 改回 true 即可。
+void WinCap::restartSelect()
+{
+    // 1. 归零所有按下态：右键可能落在拖框 / 拖形状的中途
+    isPress = false;
+    if (isMouseDown) {
+        isMouseDown = false;
+        ReleaseCapture();
+    }
+    newShape = nullptr;
+    shapeHover = nullptr;
+    editTarget = nullptr;
+    hasDragged = false;
+    prevPressCreatedShape = false;
+    lastDownTime = 0;          // 别把上一轮的按下时间算进双击判定
+    killTimer(100);            // 悬停刷新的定时器也跟着停
+    // 2. 选区先清掉：后面取消工具选中时 layoutTools 会因为"没有选区"直接返回，不会乱摆
+    cutMask->reset();
+    cutMask->autoSnap = false;
+    // 3. 工具条收起，工具选中态也复位（新一轮框选从"没选工具"开始）
+    if (toolMain) {
+        toolMain->cancelSelect();
+        toolMain->hide();
+    }
+    if (toolSub) toolSub->hideTools();
+    // 4. 回到 Select 阶段，放大镜摆到光标处 —— 就是 onCreated 里那一帧的画面
+    stage = CapStage::Select;
+    POINT cur{};
+    GetCursorPos(&cur);
+    ScreenToClient(hwnd, &cur);
+    setPixPos(cur);
+    getPixImg(cur);
+    // 5. 焦点抢回来：工具条消失后焦点可能还留在它上面，否则接下来 Esc / 方向键会失灵
+    SetForegroundWindow(hwnd);
+    SetFocus(hwnd);
+    refresh();
+}
+
 void WinCap::layoutTool(Ling::WinBase* tool)
 {
     if (!tool) return;
@@ -743,8 +764,10 @@ void WinCap::layoutTools()
 {
     if (!toolMain || !toolSub) return;
     if (!cutMask->hasRect()) return;
-    toolMain->show();   // 右键重选区后主编辑器被隐藏；重新框选进入 Adjust 时要再显示出来
     layoutTool(toolMain.get());
+    // 位置摆好之后再恢复显示：工具条可能是被 Select 阶段（右键重选区）hide 掉的，
+    // 先 show 再摆位置会在旧位置闪一下
+    if (toolMain->hwnd && !IsWindowVisible(toolMain->hwnd)) toolMain->show();
     RECT maskScr{ (int)(x + cutMask->maskRect.left), (int)(y + cutMask->maskRect.top),
                   (int)(x + cutMask->maskRect.right), (int)(y + cutMask->maskRect.bottom) };
     HMONITOR hMon = MonitorFromRect(&maskScr, MONITOR_DEFAULTTONEAREST);

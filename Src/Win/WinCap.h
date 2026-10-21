@@ -53,6 +53,10 @@ private:
 	void raiseTools();
 	// 命令行 --enter=pin 时框选完成直接进入标注界面（等于替用户按住 Ctrl）
 	bool enterByArg();
+	// 右键门面：把窗口整体退回"按快捷键首次进入"的屏幕选区界面 ——
+	// 清掉选区 / 标注 / 工具条，放大镜摆回光标处，十字光标等待重新拖框。
+	// 与首次进入的唯一区别是不开智能吸附（用户明确要求右键后是纯手动选框）
+	void restartSelect();
 	// 首次进入 Adjust 阶段时建出标注用的工具条与历史（懒建，避免截图窗口一开始就带着工具条）
 	void ensureAnnotation();
 	// 离屏把"选区底图 + 未撤销 shape"合成出最终图像的像素（与 WinPin::getImagePixels 同格式）

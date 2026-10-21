@@ -150,12 +150,15 @@ void CutMask::makeRect(POINT pos)
 	LONG top = std::min(pressPos.y, pos.y);
 	LONG bottom = std::max(pressPos.y, pos.y);
 	// 拖动框选时的智能吸附：每条边就近吸附到识别表里的窗口 / 控件边界（阈值内），
-	// 这样拉出来的选区会自然贴齐窗口或按钮的边
-	const float th = snapThreshold * win->dpi;
-	left = (LONG)snapCoord((float)left, th);
-	right = (LONG)snapCoord((float)right, th);
-	top = (LONG)snapCoord((float)top, th);
-	bottom = (LONG)snapCoord((float)bottom, th);
+	// 这样拉出来的选区会自然贴齐窗口或按钮的边。autoSnap 关掉时（右键重进选区）纯手动，
+	// 拉出来的是光标划过的那块矩形，不会被窗口边界拽走
+	if (autoSnap) {
+		const float th = snapThreshold * win->dpi;
+		left = (LONG)snapCoord((float)left, th);
+		right = (LONG)snapCoord((float)right, th);
+		top = (LONG)snapCoord((float)top, th);
+		bottom = (LONG)snapCoord((float)bottom, th);
+	}
 	if (right - left < (LONG)minSize) right = left + (LONG)minSize;
 	if (bottom - top < (LONG)minSize) bottom = top + (LONG)minSize;
 	maskRect.left = (float)left;
