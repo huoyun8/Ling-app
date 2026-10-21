@@ -21,6 +21,8 @@ private:
 	void buildMosaicBitmap();
 	Microsoft::WRL::ComPtr<ID2D1Bitmap> createMosaicBitmap(int blockSize);
 	void mosaicPixels(BYTE* bits, UINT32 pitch, UINT32 width, UINT32 height, int blockSize);
+	// 三次盒式模糊近似高斯（水平/垂直各3遍），半径随滑块
+	void blurPixels(BYTE* bits, UINT32 pitch, UINT32 width, UINT32 height, int radius);
 	float pointToSegmentDistance(const D2D1_POINT_2F& p, const D2D1_POINT_2F& a, const D2D1_POINT_2F& b);
 	void hitTest(const D2D1_POINT_2F& mousePos);
 private:

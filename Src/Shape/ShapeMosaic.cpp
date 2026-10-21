@@ -1,5 +1,4 @@
 ﻿#include "pch.h"
-#include <d2d1effects.h>
 #include "Win/WinHost.h"
 #include "Tool/ToolMain.h"
 #include "Tool/ToolSub.h"
@@ -381,12 +380,15 @@ ComPtr<ID2D1Bitmap> ShapeMosaic::createMosaicBitmap(int blockSize)
 		if (FAILED(hr)) return result;
 	}
 
-	// 往外扩一个 blockSize，避免边缘那一列色块取样不足；再夹到窗口范围内
+	// 往外扩一圈，避免边缘那一列取样不足；模糊模式按模糊半径扩（要留出糊开的余量），
+	// 色块模式按 blockSize 扩；再夹到窗口范围内
 	const int winW = (int)win->w, winH = (int)win->h;
-	int left = std::max(0, std::min((int)std::floor(bounds.left) - blockSize, winW));
-	int top = std::max(0, std::min((int)std::floor(bounds.top) - blockSize, winH));
-	int right = std::max(0, std::min((int)std::ceil(bounds.right) + blockSize + 1, winW));
-	int bottom = std::max(0, std::min((int)std::ceil(bounds.bottom) + blockSize + 1, winH));
+	int blurRadius = isBlur ? (int)std::clamp(strokeWidth * 0.4f, 2.f, 24.f) : 0;
+	int pad = isBlur ? blurRadius : blockSize;
+	int left = std::max(0, std::min((int)std::floor(bounds.left) - pad, winW));
+	int top = std::max(0, std::min((int)std::floor(bounds.top) - pad, winH));
+	int right = std::max(0, std::min((int)std::ceil(bounds.right) + pad + 1, winW));
+	int bottom = std::max(0, std::min((int)std::ceil(bounds.bottom) + pad + 1, winH));
 	if (left >= right || top >= bottom) return result;
 
 	mosaicOrigin = { (float)left, (float)top };
@@ -422,31 +424,6 @@ ComPtr<ID2D1Bitmap> ShapeMosaic::createMosaicBitmap(int blockSize)
 	ctx->SetTarget(nullptr);
 	if (FAILED(hr)) return result;
 
-	// 高斯模糊模式：直接在 GPU 上对这块区域做高斯模糊，不再读回像素打色块。
-	// 源 targetBitmap 只覆盖包围盒那一小块，所以模糊在区域内闭环，不会糊到区域外。
-	if (isBlur) {
-		ComPtr<ID2D1GaussianBlurEffect> blur;
-		hr = ctx->CreateEffect(CLSID_D2D1GaussianBlur, blur.GetAddressOf());
-		if (FAILED(hr)) return result;
-		blur->SetInput(0, targetBitmap.Get());
-		// 模糊强度随滑块走（粗笔 = 更糊）。默认 28 → 标准差约 14px，明显糊但保留大体轮廓
-		float stdDev = std::clamp(strokeWidth * 0.5f, 4.f, 48.f);
-		blur->SetValue(D2D1_GAUSSIANBLUR_PROP_STANDARD_DEVIATION, stdDev);
-		ComPtr<ID2D1Bitmap1> outBitmap;
-		hr = ctx->CreateBitmap(localSize, nullptr, 0, &targetProps, outBitmap.GetAddressOf());
-		if (FAILED(hr)) return result;
-		ctx->SetTarget(outBitmap.Get());
-		ctx->SetTransform(D2D1::Matrix3x2F::Identity());
-		ctx->BeginDraw();
-		ctx->Clear(D2D1::ColorF(0, 0.0f));
-		ctx->DrawImage(blur.Get());
-		hr = ctx->EndDraw();
-		ctx->SetTarget(nullptr);
-		if (FAILED(hr)) return result;
-		result = outBitmap;
-		return result;
-	}
-
 	// GPU 上的 target 位图不能直接 Map，得先拷到一块带 CPU_READ 的位图上
 	D2D1_BITMAP_PROPERTIES1 cpuProps{
 		.pixelFormat{ targetBitmap->GetPixelFormat() },
@@ -468,7 +445,14 @@ ComPtr<ID2D1Bitmap> ShapeMosaic::createMosaicBitmap(int blockSize)
 	CopyMemory(pixels.data(), mapped.bits, pixels.size());
 	cpuBitmap->Unmap();
 
-	mosaicPixels(pixels.data(), mapped.pitch, localSize.width, localSize.height, blockSize);
+	// 高斯模糊模式：对读回的整块区域像素做三次盒式模糊（近似高斯），
+	// 不再打像素色块；模糊半径随滑块走（粗笔 = 更糊）
+	if (isBlur) {
+		blurPixels(pixels.data(), mapped.pitch, localSize.width, localSize.height, blurRadius);
+	}
+	else {
+		mosaicPixels(pixels.data(), mapped.pitch, localSize.width, localSize.height, blockSize);
+	}
 
 	auto bitmapProps = D2D1::BitmapProperties(D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_PREMULTIPLIED));
 	hr = ctx->CreateBitmap(localSize, pixels.data(), mapped.pitch, &bitmapProps, result.GetAddressOf());
@@ -510,6 +494,57 @@ void ShapeMosaic::mosaicPixels(BYTE* bits, UINT32 pitch, UINT32 width, UINT32 he
 					pixel[2] = r;
 					pixel[3] = a;
 				}
+			}
+		}
+	}
+}
+
+// 三次盒式模糊近似高斯：每遍先水平后垂直，读旧缓冲写新缓冲，半径越大越糊。
+// 边缘用夹取处理（clamp 到边界），不会像镜像那样在边界产生明显的延续条纹。
+void ShapeMosaic::blurPixels(BYTE* bits, UINT32 pitch, UINT32 width, UINT32 height, int radius)
+{
+	if (!bits || radius <= 0 || width == 0 || height == 0) return;
+	std::vector<BYTE> tmp((size_t)pitch * height);
+	constexpr UINT32 stride{ 4 };
+	for (int pass = 0; pass < 3; ++pass) {
+		// 水平：bits → tmp
+		for (UINT32 y = 0; y < height; ++y) {
+			auto src = bits + (size_t)y * pitch;
+			auto dst = tmp.data() + (size_t)y * pitch;
+			unsigned long long b{ 0 }, g{ 0 }, r{ 0 }, a{ 0 };
+			int cnt{ 0 };
+			for (int k = -radius; k <= radius; ++k) {
+				int x = std::clamp(k, 0, (int)width - 1);
+				auto px = src + (size_t)x * stride;
+				b += px[0]; g += px[1]; r += px[2]; a += px[3]; ++cnt;
+			}
+			for (UINT32 x = 0; x < width; ++x) {
+				auto d = dst + (size_t)x * stride;
+				d[0] = (BYTE)(b / cnt); d[1] = (BYTE)(g / cnt);
+				d[2] = (BYTE)(r / cnt); d[3] = (BYTE)(a / cnt);
+				int xin = (int)x + radius + 1;
+				int xout = (int)x - radius;
+				if (xin < (int)width) { auto px = src + (size_t)xin * stride; b += px[0]; g += px[1]; r += px[2]; a += px[3]; ++cnt; }
+				if (xout >= 0) { auto px = src + (size_t)xout * stride; b -= px[0]; g -= px[1]; r -= px[2]; a -= px[3]; --cnt; }
+			}
+		}
+		// 垂直：tmp → bits
+		for (UINT32 x = 0; x < width; ++x) {
+			unsigned long long b{ 0 }, g{ 0 }, r{ 0 }, a{ 0 };
+			int cnt{ 0 };
+			for (int k = -radius; k <= radius; ++k) {
+				int y = std::clamp(k, 0, (int)height - 1);
+				auto px = tmp.data() + (size_t)y * pitch + (size_t)x * stride;
+				b += px[0]; g += px[1]; r += px[2]; a += px[3]; ++cnt;
+			}
+			for (UINT32 y = 0; y < height; ++y) {
+				auto d = bits + (size_t)y * pitch + (size_t)x * stride;
+				d[0] = (BYTE)(b / cnt); d[1] = (BYTE)(g / cnt);
+				d[2] = (BYTE)(r / cnt); d[3] = (BYTE)(a / cnt);
+				int yin = (int)y + radius + 1;
+				int yout = (int)y - radius;
+				if (yin < (int)height) { auto px = tmp.data() + (size_t)yin * pitch + (size_t)x * stride; b += px[0]; g += px[1]; r += px[2]; a += px[3]; ++cnt; }
+				if (yout >= 0) { auto px = tmp.data() + (size_t)yout * pitch + (size_t)x * stride; b -= px[0]; g -= px[1]; r -= px[2]; a -= px[3]; --cnt; }
 			}
 		}
 	}
