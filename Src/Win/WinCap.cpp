@@ -406,6 +406,11 @@ void WinCap::onDown(POINT pos, bool isRight)
             isPress = false;
             cutMask->reset();
             cutMask->autoSnap = true;
+            // 十字光标跟到当前鼠标，完全复刻快捷键首次进入的初始状态
+            POINT cur; GetCursorPos(&cur);
+            ScreenToClient(hwnd, &cur);
+            setPixPos(cur);
+            getPixImg(cur);
             return;
         }
         if (stage == CapStage::Adjust) {
@@ -463,15 +468,12 @@ void WinCap::onDown(POINT pos, bool isRight)
     lastDownTime = now;
     lastDownPos = pos;
     if (stage == CapStage::Adjust) {
-        // 没选工具时双击 = 复制（等效 Ctrl+C）。选了工具就交给标注，两次按下都是画图
         if (isDblClick && (!toolMain || toolMain->curId.empty())) {
             copyToClipboard();
             return;
         }
-        // 选区内部且选中了工具 → 在该位置开始画对应标注；
-        // 否则（内部没选工具 = 拖动移动选区；按在边/角 = 改选区大小）→ 交给 CutMask
-        auto hit = cutMask->hitTest(pos);
-        if (hit == MaskHit::Inside && toolMain && !toolMain->curId.empty()) {
+        // 有副编辑器（选中了工具）= 进入编辑，四周区域锁定：点哪都用对应工具画，不再改选框
+        if (toolMain && !toolMain->curId.empty()) {
             isMouseDown = true;
             hasDragged = false;
             SetCapture(hwnd);
@@ -488,13 +490,13 @@ void WinCap::onDown(POINT pos, bool isRight)
             }
             return;
         }
+        // 没有副编辑器 = 可以再次选择/拖动区域（内部拖=移动，边/角=改大小）
         isPress = true;
         cutMask->startAdjust(pos);
         return;
     }
     if (stage == CapStage::Select) {
-        // 手动拖动框选区：沿用当前吸附开关 —— 右键进入手动十字后保持不吸附，
-        // 只有再次按快捷键首次进入时才恢复智能吸附
+        // 手动拖动框选区：沿用当前吸附开关（右键后恢复智能吸附，等同快捷键重进选区）
         isPress = true;
         cutMask->startMakeRect(pos);
     }
