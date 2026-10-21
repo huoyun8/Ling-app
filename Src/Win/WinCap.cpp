@@ -451,7 +451,13 @@ void WinCap::onDown(POINT pos, bool isRight)
             if (toolMain) toolMain->hide();
             if (toolSub) toolSub->hideTools();
             cutMask->reset();
+            cutMask->autoSnap = true;   // 等同快捷键重进选区：恢复智能吸附
             stage = CapStage::Select;
+            // 十字光标跟到当前鼠标，完全复刻快捷键首次进入的初始状态
+            POINT cur; GetCursorPos(&cur);
+            ScreenToClient(hwnd, &cur);
+            setPixPos(cur);
+            getPixImg(cur);
             refresh();
             return;
         }
