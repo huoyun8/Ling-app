@@ -127,11 +127,7 @@ void WinCap::layout()
         {
             if (!shape->isUndo) shape->paint(ctx);
         }
-        // 悬停（未按下）：2px 细线框；编辑中（按下/拖画）：只显示 8 个小方块，不套黑框
-        if (shapeHover) {
-            if (isMouseDown) shapeHover->paintDragger(ctx);
-            else shapeHover->paintHoverFrame(ctx);
-        }
+        if (!isMouseDown && shapeHover) shapeHover->paintDragger(ctx);
     }
     // 压暗层 + 选区边框 + 尺寸标签画在标注之上：橡皮擦恢复底图时只会擦掉标注，
     // 不会把框外的压暗边和选取边框一起擦掉

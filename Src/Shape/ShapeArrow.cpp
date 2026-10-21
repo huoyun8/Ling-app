@@ -39,7 +39,7 @@ void ShapeArrow::paintDragger(ID2D1DeviceContext* ctx)
 {
 	for (auto& dragger : draggers)
 	{
-		ctx->DrawRectangle(dragger, brushDragger.Get(), 3.0f * win->dpi);
+		ctx->DrawRectangle(dragger, brushDragger.Get(), 1.5f * win->dpi);
 	}
 }
 
@@ -205,7 +205,3 @@ void ShapeArrow::constrainToEightDirections(const float anchorX, const float anc
 	}
 }
 
-void ShapeArrow::paintHoverFrame(ID2D1DeviceContext* ctx)
-{
-	drawHoverFrame(ctx, draggersBounds(draggers));
-}

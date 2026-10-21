@@ -73,7 +73,7 @@ void ShapeEraser::paintDragger(ID2D1DeviceContext* ctx)
 	size_t count = isRect ? draggers.size() : 2;
 	for (size_t i = 0; i < count; ++i)
 	{
-		ctx->DrawRectangle(draggers[i], brushDragger.Get(), 3.0f * win->dpi);
+		ctx->DrawRectangle(draggers[i], brushDragger.Get(), 1.5f * win->dpi);
 	}
 }
 
@@ -386,7 +386,3 @@ void ShapeEraser::hitTest(const D2D1_POINT_2F& mousePos)
 	}
 }
 
-void ShapeEraser::paintHoverFrame(ID2D1DeviceContext* ctx)
-{
-	drawHoverFrame(ctx, draggersBounds(draggers));
-}

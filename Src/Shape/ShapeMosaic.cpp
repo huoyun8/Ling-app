@@ -69,7 +69,7 @@ void ShapeMosaic::paintDragger(ID2D1DeviceContext* ctx)
 	size_t count = isRect ? draggers.size() : 2;
 	for (size_t i = 0; i < count; ++i)
 	{
-		ctx->DrawRectangle(draggers[i], brushDragger.Get(), 3.0f * win->dpi);
+		ctx->DrawRectangle(draggers[i], brushDragger.Get(), 1.5f * win->dpi);
 	}
 }
 
@@ -392,9 +392,10 @@ ComPtr<ID2D1Bitmap> ShapeMosaic::createMosaicBitmap(int blockSize)
 	// 往外扩一圈，避免边缘那一列取样不足；模糊模式按模糊半径扩（要留出糊开的余量），
 	// 色块模式按 blockSize 扩；再夹到窗口范围内
 	const int winW = (int)win->w, winH = (int)win->h;
-	// 模糊强度由"强度条"（马赛克滑块）连续调节：滑块值最低档(18)→半径0=几乎透明可看字，
-	// 最高档(68)→约45px重度糊；同时用模糊半径做区域外扩余量
-	int blurRadius = isBlur ? (int)std::clamp((strokeWidth - 18.f) * 0.9f, 0.f, 60.f) : 0;
+	// 模糊强度由"强度条"（马赛克滑块）连续调节：滑块最低档(18)→半径0=几乎透明可看字，
+	// 最高档(68)→约20px。斜率调缓(0.4)、上限压低到20，让强度跨度平缓，
+	// 避免低档几下就饱和成一坨、后半段滑块没变化；同时用模糊半径做区域外扩余量
+	int blurRadius = isBlur ? (int)std::clamp((strokeWidth - 18.f) * 0.4f, 0.f, 20.f) : 0;
 	int pad = isBlur ? blurRadius : blockSize;
 	int left = std::max(0, std::min((int)std::floor(bounds.left) - pad, winW));
 	int top = std::max(0, std::min((int)std::floor(bounds.top) - pad, winH));
@@ -593,7 +594,3 @@ void ShapeMosaic::hitTest(const D2D1_POINT_2F& mousePos)
 	}
 }
 
-void ShapeMosaic::paintHoverFrame(ID2D1DeviceContext* ctx)
-{
-	drawHoverFrame(ctx, draggersBounds(draggers));
-}

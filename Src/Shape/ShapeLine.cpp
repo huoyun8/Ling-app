@@ -51,7 +51,7 @@ void ShapeLine::paintDragger(ID2D1DeviceContext* ctx)
 {
 	for (auto& dragger:draggers)
 	{
-		ctx->DrawRectangle(dragger, brushDragger.Get(), 3.0f * win->dpi);
+		ctx->DrawRectangle(dragger, brushDragger.Get(), 1.5f * win->dpi);
 	}
 }
 
@@ -198,7 +198,3 @@ void ShapeLine::hitTest(const D2D1_POINT_2F& mousePos)
 	}
 }
 
-void ShapeLine::paintHoverFrame(ID2D1DeviceContext* ctx)
-{
-	drawHoverFrame(ctx, draggersBounds(draggers));
-}

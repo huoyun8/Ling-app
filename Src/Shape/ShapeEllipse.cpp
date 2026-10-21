@@ -41,7 +41,7 @@ void ShapeEllipse::paintDragger(ID2D1DeviceContext* ctx)
 {
 	for (auto& dragger : draggers)
 	{
-		ctx->DrawRectangle(dragger, brushDragger.Get(), 3.0f * win->dpi);
+		ctx->DrawRectangle(dragger, brushDragger.Get(), 1.5f * win->dpi);
 	}
 }
 
@@ -275,7 +275,3 @@ void ShapeEllipse::setCursor()
 	}
 }
 
-void ShapeEllipse::paintHoverFrame(ID2D1DeviceContext* ctx)
-{
-	drawHoverFrame(ctx, draggersBounds(draggers));
-}

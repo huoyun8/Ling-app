@@ -40,7 +40,7 @@ void ShapeRect::paintDragger(ID2D1DeviceContext* ctx)
 {
 	for (auto& dragger:draggers)
 	{
-		ctx->DrawRectangle(dragger, brushDragger.Get(), 3.0f * win->dpi);
+		ctx->DrawRectangle(dragger, brushDragger.Get(), 1.5f * win->dpi);
 	}
 }
 
@@ -257,7 +257,3 @@ void ShapeRect::setCursor()
 	}
 }
 
-void ShapeRect::paintHoverFrame(ID2D1DeviceContext* ctx)
-{
-	drawHoverFrame(ctx, draggersBounds(draggers));
-}

@@ -1,6 +1,4 @@
 #pragma once
-#include <vector>
-#include <algorithm>
 #include <include/Ling.h>
 class WinHost;
 class ShapeBase
@@ -10,8 +8,6 @@ public:
 	virtual ~ShapeBase();
 	virtual void paint(ID2D1DeviceContext* ctx) = 0;
 	virtual void paintDragger(ID2D1DeviceContext* ctx) {};
-	// 悬停时画 2px 细线框（选中编辑时还要叠加 8 个小方块，见 paintDragger）
-	virtual void paintHoverFrame(ID2D1DeviceContext* ctx) {};
 	virtual void mouseMove(const float x, const float y) { };
 	virtual void mouseDrag(const float x, const float y) {};
 	virtual void mouseDown(const float x, const float y) { };
@@ -30,10 +26,6 @@ protected:
 protected:
 	float draggerSize;
 	Microsoft::WRL::ComPtr<ID2D1SolidColorBrush> brushDragger;
-	// 由 8 个控制点小方块求外接包围框，用于画悬停细线框
-	D2D1_RECT_F draggersBounds(const std::vector<D2D1_RECT_F>& dg) const;
-	// 画 2px 细线框
-	void drawHoverFrame(ID2D1DeviceContext* ctx, const D2D1_RECT_F& r) const;
 private:
 };
 

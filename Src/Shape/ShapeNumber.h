@@ -8,7 +8,6 @@ public:
 	~ShapeNumber();
 	void paint(ID2D1DeviceContext* ctx) override;
 	void paintDragger(ID2D1DeviceContext* ctx) override;
-	void paintHoverFrame(ID2D1DeviceContext* ctx) override;
 	void mouseDrag(const float x, const float y) override;
 	void mouseDown(const float x, const float y) override;
 	void mouseUp(const float x, const float y) override;

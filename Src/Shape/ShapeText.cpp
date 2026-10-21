@@ -55,12 +55,6 @@ void ShapeText::paintDragger(ID2D1DeviceContext* ctx)
 	ctx->DrawRectangle(rect, textBrush.Get(), win->dpi, dashedStrokeStyle.Get());
 }
 
-void ShapeText::paintHoverFrame(ID2D1DeviceContext* ctx)
-{
-	// 文字没有 8 个控制点：悬停框就是那圈虚线框，编辑中由 TextBox 自己显示、这里不画
-	if (!ctx || isEditing) return;
-	ctx->DrawRectangle(rect, textBrush.Get(), win->dpi, dashedStrokeStyle.Get());
-}
 
 void ShapeText::mouseDrag(const float x, const float y)
 {
