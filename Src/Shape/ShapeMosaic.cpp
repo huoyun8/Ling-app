@@ -502,7 +502,9 @@ void ShapeMosaic::mosaicPixels(BYTE* bits, UINT32 pitch, UINT32 width, UINT32 he
 }
 
 // 三次盒式模糊近似高斯：每遍先水平后垂直，读旧缓冲写新缓冲，半径越大越糊。
-// 边缘用夹取处理（clamp 到边界），不会像镜像那样在边界产生明显的延续条纹。
+// 关键：对每个像素直接对 [x-r, x+r] 的"实际夹取范围"求平均、窗口计数按真实像素数来，
+// 绝不把夹取到边界的重复像素重复计数 —— 否则起点那个颜色会被重复加进窗口、
+// 把整块区域刷成同一种颜色（例如起点是蓝、后面是白，结果全蓝）。
 void ShapeMosaic::blurPixels(BYTE* bits, UINT32 pitch, UINT32 width, UINT32 height, int radius)
 {
 	if (!bits || radius <= 0 || width == 0 || height == 0) return;
@@ -513,40 +515,38 @@ void ShapeMosaic::blurPixels(BYTE* bits, UINT32 pitch, UINT32 width, UINT32 heig
 		for (UINT32 y = 0; y < height; ++y) {
 			auto src = bits + (size_t)y * pitch;
 			auto dst = tmp.data() + (size_t)y * pitch;
-			unsigned long long b{ 0 }, g{ 0 }, r{ 0 }, a{ 0 };
-			int cnt{ 0 };
-			for (int k = -radius; k <= radius; ++k) {
-				int x = std::clamp(k, 0, (int)width - 1);
-				auto px = src + (size_t)x * stride;
-				b += px[0]; g += px[1]; r += px[2]; a += px[3]; ++cnt;
-			}
 			for (UINT32 x = 0; x < width; ++x) {
+				int x0 = (int)x - radius;
+				if (x0 < 0) x0 = 0;
+				int x1 = (int)x + radius;
+				if (x1 >= (int)width) x1 = (int)width - 1;
+				unsigned long long b{ 0 }, g{ 0 }, r{ 0 }, a{ 0 };
+				for (int xx = x0; xx <= x1; ++xx) {
+					auto px = src + (size_t)xx * stride;
+					b += px[0]; g += px[1]; r += px[2]; a += px[3];
+				}
+				int cnt = x1 - x0 + 1;
 				auto d = dst + (size_t)x * stride;
 				d[0] = (BYTE)(b / cnt); d[1] = (BYTE)(g / cnt);
 				d[2] = (BYTE)(r / cnt); d[3] = (BYTE)(a / cnt);
-				int xin = (int)x + radius + 1;
-				int xout = (int)x - radius;
-				if (xin < (int)width) { auto px = src + (size_t)xin * stride; b += px[0]; g += px[1]; r += px[2]; a += px[3]; ++cnt; }
-				if (xout >= 0) { auto px = src + (size_t)xout * stride; b -= px[0]; g -= px[1]; r -= px[2]; a -= px[3]; --cnt; }
 			}
 		}
 		// 垂直：tmp → bits
 		for (UINT32 x = 0; x < width; ++x) {
-			unsigned long long b{ 0 }, g{ 0 }, r{ 0 }, a{ 0 };
-			int cnt{ 0 };
-			for (int k = -radius; k <= radius; ++k) {
-				int y = std::clamp(k, 0, (int)height - 1);
-				auto px = tmp.data() + (size_t)y * pitch + (size_t)x * stride;
-				b += px[0]; g += px[1]; r += px[2]; a += px[3]; ++cnt;
-			}
 			for (UINT32 y = 0; y < height; ++y) {
+				int y0 = (int)y - radius;
+				if (y0 < 0) y0 = 0;
+				int y1 = (int)y + radius;
+				if (y1 >= (int)height) y1 = (int)height - 1;
+				unsigned long long b{ 0 }, g{ 0 }, r{ 0 }, a{ 0 };
+				for (int yy = y0; yy <= y1; ++yy) {
+					auto px = tmp.data() + (size_t)yy * pitch + (size_t)x * stride;
+					b += px[0]; g += px[1]; r += px[2]; a += px[3];
+				}
+				int cnt = y1 - y0 + 1;
 				auto d = bits + (size_t)y * pitch + (size_t)x * stride;
 				d[0] = (BYTE)(b / cnt); d[1] = (BYTE)(g / cnt);
 				d[2] = (BYTE)(r / cnt); d[3] = (BYTE)(a / cnt);
-				int yin = (int)y + radius + 1;
-				int yout = (int)y - radius;
-				if (yin < (int)height) { auto px = tmp.data() + (size_t)yin * pitch + (size_t)x * stride; b += px[0]; g += px[1]; r += px[2]; a += px[3]; ++cnt; }
-				if (yout >= 0) { auto px = tmp.data() + (size_t)yout * pitch + (size_t)x * stride; b -= px[0]; g -= px[1]; r -= px[2]; a -= px[3]; --cnt; }
 			}
 		}
 	}
