@@ -40,12 +40,6 @@ ShapeBase* History::createShape(const std::wstring& state, const int& x, const i
             shapes.push_back(std::move(shape));
         }
     }
-    else if (toolMain->curId == L"ellipse") {
-        // 独立椭圆工具已并入矩形，此分支保留防历史调用
-        auto shape = std::make_unique<ShapeEllipse>(win);
-        result = shape.get();
-        shapes.push_back(std::move(shape));
-    }
     else if (toolMain->curId == L"arrow") {
         auto shape = std::make_unique<ShapeArrow>(win);
         result = shape.get();

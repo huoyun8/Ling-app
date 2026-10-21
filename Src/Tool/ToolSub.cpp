@@ -19,7 +19,6 @@ namespace {
 	};
 	const std::pair<const wchar_t*, SliderCfg> sliderCfgs[]{
 		{ L"rect",    { L"width",     1.f, 26.f,  2.f } },
-		{ L"ellipse", { L"width",     1.f, 26.f,  2.f } },
 		{ L"arrow",   { L"width",     1.f, 16.f,  5.f } },
 		{ L"number",  { L"radius",    6.f, 86.f, 9.f } },
 		{ L"line",    { L"width",     1.f, 60.f, 12.f } },
@@ -198,12 +197,6 @@ void ToolSub::syncShapeSelect()
 	}
 	// 填充字形随形状变：切换形状后填充开关要跟着改成矩形/椭圆
 	updateFillIcon();
-}
-
-void ToolSub::showEllipseTools()
-{
-	// 矩形/椭圆已合并，椭圆走 showRectTools；此函数保留避免历史分支悬空
-	showRectTools();
 }
 
 void ToolSub::showArrowTools()

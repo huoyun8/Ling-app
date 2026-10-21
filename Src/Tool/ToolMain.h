@@ -11,8 +11,6 @@ public:
 	float getBtnCenterX();
 	// 取消当前选中：清空 curId、把所有按钮恢复常态配色，并重排工具组（curId 空了 ToolSub 会隐藏）。
 	void cancelSelect();
-	// 主工具图标随填充状态切换：矩形/椭圆/箭头/序号在空心/实心字形间切换
-	void updateShapeIcon();
 public:
 	std::wstring curId;
 private:

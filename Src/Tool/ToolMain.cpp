@@ -73,24 +73,6 @@ float ToolMain::getBtnCenterX()
 	return result;
 }
 
-// 主工具图标随填充状态切换：箭头/序号在空心/实心字形间切换。
-// 矩形已用字体字形"矩形+椭圆交叠"（e691），马赛克/图钉也用字体字形，不在这里切。
-void ToolMain::updateShapeIcon()
-{
-	if (!win || !win->toolSub) return;
-	auto setBtn = [this](const std::wstring& id, const std::wstring& glyph) {
-		size_t bi{ 0 };
-		for (size_t i = 0; i < btnIds.size(); ++i) {
-			if (btnIds[i] == L"|") continue;
-			if (btnIds[i] == id) { btns[bi]->setText(glyph); return; }
-			++bi;
-		}
-	};
-	// 主编辑器图标固定：箭头=实心(e604)、序号=空心(e776)，不随副编辑器填充切换（切换都在副编辑器）
-	setBtn(L"arrow",   L"\ue604");
-	setBtn(L"number",  L"\ue776");
-}
-
 void ToolMain::onCreated()
 {	tip = std::make_unique<Tip>(this);
 	body->setBg(0xFFFFFFFF);
@@ -126,8 +108,6 @@ void ToolMain::onCreated()
 			b->setHoverColor(0xE63946FF);
 		}
 	}
-	// 初始图标按填充状态摆对（箭头/序号默认实心；矩形/马赛克/图钉直接用字体字形）
-	updateShapeIcon();
 	show();
 }
 
@@ -206,9 +186,6 @@ void ToolMain::onClick(Ling::Button* btn)
 	if (curId == L"rect") {
 		win->toolSub->showRectTools();
 	}
-	else if (curId == L"ellipse") {
-		win->toolSub->showEllipseTools();
-	}
 	else if (curId == L"arrow") {
 		win->toolSub->showArrowTools();
 	}
@@ -230,8 +207,6 @@ void ToolMain::onClick(Ling::Button* btn)
 	else {
 		win->toolSub->hideTools();
 	}
-	// 主工具图标按当前填充状态摆对（空心/实心）
-	updateShapeIcon();
 	// curId 变化后 ToolMain 可能要上移给 ToolSub 腾位置，交给 WinHost 重新排布整组
 	win->layoutTools();
 }

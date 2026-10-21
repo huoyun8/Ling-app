@@ -10,7 +10,6 @@ public:
 	ToolSub(WinHost* win);
 	~ToolSub();
 	void showRectTools();
-	void showEllipseTools();
 	void showArrowTools();
 	void showNumberTools();
 	void showLineTools();

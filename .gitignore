@@ -7,3 +7,6 @@ Res.aps
 /ScreenCapture/x64/
 /ScreenCapture/ScreenCapture/x64/
 **/x64/**
+# 构建产物，不入库（云端 Actions 编译生成）
+ScreenCapture.exe
+*.exe
