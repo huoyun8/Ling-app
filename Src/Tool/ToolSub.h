@@ -1,5 +1,6 @@
 #pragma once
 #include <include/Ling.h>
+#include <functional>
 
 class WinHost;
 class Tip;
@@ -52,7 +53,14 @@ private:
 	// 建一个可切换的工具按钮：初始态从配置文件读（写回 flag），点击时翻转 flag、刷新配色并落盘。
 	// tipKey 是提示文字的语言键（如 tool.rectFill），cfgKey 是这个开关在 config.json 里的键名
 	// （fill / semiTransparent / bold / …，同一工具下不能重名）。
-	Ling::Button* makeToggleBtn(const std::wstring& text, bool* flag, const std::wstring& tipKey, const std::wstring& cfgKey);
+	// onText/offText 是开关两种状态下分别显示的字形（开启用 onText，关闭用 offText）：
+	// 这样图标能随状态切换（实心=开、空心=关），而不只是选中变色。不需要区分时两者传同一字形。
+	Ling::Button* makeToggleBtn(const std::wstring& onText, const std::wstring& offText, bool* flag, const std::wstring& tipKey, const std::wstring& cfgKey, float fontSize = 13.f);
+	// 自绘图标开关：不依赖 iconfont 字形，由 draw(ctx, w, h, 当前状态值) 直接用 D2D 画图标。
+	// 用于 iconfont 里没有、或字形太小/带内线不好看的图标（菱形、实心圆、黑圆白字序号等）。
+	// 状态翻转时重绘图标；内容节点重建后由 layout() 在尺寸就绪时补绘一次（首帧 / DPI 变化）。
+	Ling::Button* makeCanvasToggleBtn(bool* flag, const std::wstring& tipKey, const std::wstring& cfgKey,
+		std::function<void(ID2D1DeviceContext*, float, float, bool)> draw);
 	// 每个 show*Tools 开头都要做的事：收提示、清旧内容、记下当前工具，
 	// 再把这个工具存在 config.json 里的滑块值和颜色读回来（读不到就用默认值 / 第一个颜色）。
 	// 滑块的键名与值域查 .cpp 里那张表，id 必须是表里有的（就是 ToolMain 的按钮 id）。
@@ -100,6 +108,9 @@ private:
 	// 当前工具在 config.json 里的组名（即 ToolMain 的按钮 id）与滑块值的键名，
 	// 落盘时要用。没选工具时是空的，此时不该有任何写入。
 	std::wstring curToolId, curSliderKey;
+	// 最近一次自绘开关的补绘回调：捕获了对应 flag 的指针，layout() 尺寸就绪后调用。
+	// 内容节点每次重建（切工具）都会销毁旧画布，beginTool 里要清空它，避免悬空。
+	std::function<void()> lastToolCanvasDraw;
 	// 序号半径的取值范围（逻辑像素）。下限跟着 ShapeNumber 拖拽/滚轮的下限走，
 	// 上限给滑块留个头 —— 再大就超出滑块能表达的范围了，拖拽仍可继续放大，只是不再回写
 	static constexpr float numberMin{ 6.f }, numberMax{ 86.f };

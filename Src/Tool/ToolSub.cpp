@@ -107,6 +107,7 @@ void ToolSub::beginTool(const std::wstring& id)
 	// 按钮和滑块马上要被销毁，onLeave 不会触发，提示得手动收掉
 	tip->hide();
 	contentNode->removeAllChildren();
+	lastToolCanvasDraw = {};   // 自绘画布随子节点销毁，清掉引用避免悬空
 	curToolId = id;
 	auto cfg = findSliderCfg(id);
 	if (!cfg) return;
@@ -126,7 +127,8 @@ void ToolSub::showRectTools()
 {
 	beginTool(L"rect");
 	initSize(1, true);
-	makeToggleBtn(L"\ue602", &isRectFill, L"tool.rectFill", L"fill");
+	// 填充开关：开=实心矩形，关=空心矩形（图标随状态切换）
+	makeToggleBtn(L"\ue602", L"\ue8e8", &isRectFill, L"tool.rectFill", L"fill");
 	initSlider();
 	initColorBtns();
 }
@@ -135,7 +137,8 @@ void ToolSub::showEllipseTools()
 {
 	beginTool(L"ellipse");
 	initSize(1, true);
-	makeToggleBtn(L"\ue600", &isEllipseFill, L"tool.ellipseFill", L"fill");
+	// 填充开关：开=实心椭圆，关=空心椭圆
+	makeToggleBtn(L"\ue600", L"\ue6bc", &isEllipseFill, L"tool.ellipseFill", L"fill");
 	initSlider();
 	initColorBtns();
 }
@@ -144,7 +147,8 @@ void ToolSub::showArrowTools()
 {
 	beginTool(L"arrow");
 	initSize(1, true);
-	makeToggleBtn(L"\ue604", &isArrowFill, L"tool.arrowFill", L"fill");
+	// 填充开关：默认实心箭头，可切空心（开=实心 \ue604，关=空心 \ue603）
+	makeToggleBtn(L"\ue604", L"\ue603", &isArrowFill, L"tool.arrowFill", L"fill");
 	initSlider();
 	initColorBtns();
 }
@@ -154,7 +158,31 @@ void ToolSub::showNumberTools()
 	// 序号的滑块调的是圆半径（ShapeNumber 直接拿 getSliderVal 当 r），不是线宽
 	beginTool(L"number");
 	initSize(1, true);
-	makeToggleBtn(L"\ue605", &isNumberFill, L"tool.numberFill", L"fill");
+	// 自绘序号开关：开=黑圆+白字，关=空心圆+黑字
+	makeCanvasToggleBtn(&isNumberFill, L"tool.numberFill", L"fill",
+		[](ID2D1DeviceContext* ctx, float w, float h, bool solid) {
+			auto d2d = Ling::D2D::get();
+			Microsoft::WRL::ComPtr<ID2D1SolidColorBrush> black, white;
+			ctx->CreateSolidColorBrush(D2D1::ColorF(0x000000FF), black.GetAddressOf());
+			ctx->CreateSolidColorBrush(D2D1::ColorF(0xFFFFFFFF), white.GetAddressOf());
+			float cx = w / 2.f, cy = h / 2.f;
+			float r = std::min(w, h) * 0.34f;
+			Microsoft::WRL::ComPtr<IDWriteTextLayout> tl;
+			d2d->dwriteFactory->CreateTextLayout(L"1", 1, d2d->baseTextFormat.Get(), r * 2, r * 2, tl.ReleaseAndGetAddressOf());
+			if (tl) {
+				tl->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER);
+				tl->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_CENTER);
+				tl->SetFontSize(r * 1.15f, { 0, 1 });
+			}
+			if (solid) {
+				ctx->FillEllipse(D2D1::Ellipse(D2D1::Point2F(cx, cy), r, r), black.Get());
+				if (tl) ctx->DrawTextLayout({ cx - r, cy - r }, tl.Get(), white.Get(), D2D1_DRAW_TEXT_OPTIONS_NONE);
+			}
+			else {
+				ctx->DrawEllipse(D2D1::Ellipse(D2D1::Point2F(cx, cy), r, r), black.Get(), 1.5f);
+				if (tl) ctx->DrawTextLayout({ cx - r, cy - r }, tl.Get(), black.Get(), D2D1_DRAW_TEXT_OPTIONS_NONE);
+			}
+		});
 	initSlider();
 	initColorBtns();
 }
@@ -163,7 +191,7 @@ void ToolSub::showLineTools()
 {
 	beginTool(L"line");
 	initSize(1, true);
-	makeToggleBtn(L"\ue607", &isLineTransparent, L"tool.semiTransparent", L"semiTransparent");
+	makeToggleBtn(L"\ue607", L"\ue607", &isLineTransparent, L"tool.semiTransparent", L"semiTransparent");
 	initSlider();
 	initColorBtns();
 }
@@ -172,8 +200,8 @@ void ToolSub::showTextTools()
 {
 	beginTool(L"text");
 	initSize(2, true);
-	makeToggleBtn(L"\ue634", &isTextBold, L"tool.bold", L"bold");
-	makeToggleBtn(L"\ue682", &isTextItalic, L"tool.italic", L"italic");
+	makeToggleBtn(L"\ue634", L"\ue634", &isTextBold, L"tool.bold", L"bold");
+	makeToggleBtn(L"\ue682", L"\ue682", &isTextItalic, L"tool.italic", L"italic");
 	initSlider();
 	initColorBtns();
 }
@@ -181,11 +209,30 @@ void ToolSub::showTextTools()
 void ToolSub::showMosaicTools()
 {
 	// 这两个没有颜色按钮、窗口窄，initSize 要居中对齐到按钮上。
-	// 两个开关按钮：高斯模糊（◇）+ 矩形；initSize 按 2 个按钮排
+	// 两个开关按钮：高斯模糊（自绘菱形，实心=开/空心=关）+ 形状（实心矩形=画框/实心圆=手绘）；initSize 按 2 个按钮排
 	beginTool(L"mosaic");
 	initSize(2, false, true);
-	makeToggleBtn(L"\u25C7", &isMosaicBlur, L"tool.mosaicBlur", L"blur");
-	makeToggleBtn(L"\ue602", &isMosaicRect, L"tool.rectFill", L"rect");
+	makeCanvasToggleBtn(&isMosaicBlur, L"tool.mosaicBlur", L"blur",
+		[](ID2D1DeviceContext* ctx, float w, float h, bool solid) {
+			auto d2d = Ling::D2D::get();
+			Microsoft::WRL::ComPtr<ID2D1SolidColorBrush> b;
+			ctx->CreateSolidColorBrush(D2D1::ColorF(0x333333FF), b.GetAddressOf());
+			float cx = w / 2.f, cy = h / 2.f;
+			float r = std::min(w, h) * 0.32f;
+			Microsoft::WRL::ComPtr<ID2D1PathGeometry> path;
+			d2d->d2dFactory->CreatePathGeometry(path.GetAddressOf());
+			Microsoft::WRL::ComPtr<ID2D1GeometrySink> sink;
+			path->Open(sink.GetAddressOf());
+			sink->BeginFigure(D2D1::Point2F(cx, cy - r), D2D1_FIGURE_BEGIN_HOLLOW);
+			D2D1_POINT_2F pts[3] = { { cx + r, cy }, { cx, cy + r }, { cx - r, cy } };
+			sink->AddLines(pts, 3);
+			sink->EndFigure(D2D1_FIGURE_END_CLOSED);
+			sink->Close();
+			ctx->DrawGeometry(path.Get(), b.Get(), 1.5f);
+			if (solid) ctx->FillGeometry(path.Get(), b.Get());
+		});
+	// 形状：开=画框(实心矩形)，关=手绘(实心圆)
+	makeToggleBtn(L"\ue602", L"\ue600", &isMosaicRect, L"tool.rectFill", L"rect");
 	initSlider();
 }
 
@@ -193,7 +240,8 @@ void ToolSub::showEraserTools()
 {
 	beginTool(L"eraser");
 	initSize(1, false, true);
-	makeToggleBtn(L"\ue602", &isEraserRect, L"tool.rectFill", L"rect");
+	// 形状：开=画框(实心矩形)，关=手绘(实心圆)
+	makeToggleBtn(L"\ue602", L"\ue600", &isEraserRect, L"tool.rectFill", L"rect");
 	initSlider();
 }
 
@@ -225,6 +273,8 @@ void ToolSub::layout()
 	ctx->Clear(0);
 	paintBorder(ctx);
 	canvas->finishPaint();
+	// 自绘开关图标：尺寸就绪后补绘（首帧 / DPI 变化），否则会一直是空的
+	if (lastToolCanvasDraw) lastToolCanvasDraw();
 }
 
 void ToolSub::onMinMaxInfo(MINMAXINFO* mmi)
@@ -339,24 +389,61 @@ void ToolSub::applyToggleStyle(Ling::Button* btn, bool selected)
 	}
 }
 
-Ling::Button* ToolSub::makeToggleBtn(const std::wstring& text, bool* flag, const std::wstring& tipKey, const std::wstring& cfgKey)
+Ling::Button* ToolSub::makeToggleBtn(const std::wstring& onText, const std::wstring& offText, bool* flag, const std::wstring& tipKey, const std::wstring& cfgKey, float fontSize)
 {
 	// 上次退出前的状态在配置文件里，先取回来盖掉内存里那份（成员的初值只是"从没设置过"时的默认）
 	*flag = Setting::get()->getToolFlag(curToolId, cfgKey, *flag);
 	auto btn = contentNode->makeChild<Ling::Button>();
-	btn->setText(text);
+	btn->setText(*flag ? onText : offText);
 	btn->setHeight(btnSize - 2.5);
 	btn->setFlexGrow(1.f);
 	btn->setFontFamily(L"icon");
-	btn->setFontSize(13.f);
+	btn->setFontSize(fontSize);
 	applyToggleStyle(btn, *flag);
 	tip->bind(btn, Lang::get(tipKey));
 	// flag 指向 ToolSub 的成员，生命周期与 this 相同，btn 也挂在 this 的节点树上，捕获裸指针安全。
-	// cfgKey 按值捕获：调用方传进来的是临时量
+	// cfgKey / onText / offText 按值捕获：调用方传进来的是临时量
+	btn->onClick.add([this, flag, cfgKey, onText, offText](Ling::Button* b) {
+		*flag = !*flag;
+		b->setText(*flag ? onText : offText);   // 图标随状态切换：实心=开、空心=关
+		applyToggleStyle(b, *flag);
+		Setting::get()->setToolFlag(curToolId, cfgKey, *flag);
+		win->onToolStyleChanged();
+	});
+	return btn;
+}
+
+// 自绘图标开关：画布铺满按钮，draw(ctx, w, h, 状态) 负责画图标。
+// 首帧/DPI 变化时尺寸未就绪 startPaint 拿不到 context，所以在 layout() 里补绘一次
+Ling::Button* ToolSub::makeCanvasToggleBtn(bool* flag, const std::wstring& tipKey, const std::wstring& cfgKey,
+	std::function<void(ID2D1DeviceContext*, float, float, bool)> draw)
+{
+	*flag = Setting::get()->getToolFlag(curToolId, cfgKey, *flag);
+	auto btn = contentNode->makeChild<Ling::Button>();
+	btn->setHeight(btnSize - 2.5);
+	btn->setFlexGrow(1.f);
+	applyToggleStyle(btn, *flag);
+	tip->bind(btn, Lang::get(tipKey));
+	auto cv = btn->makeChild<Ling::Canvas>();
+	cv->setPositionType(Ling::Position::Absolute);
+	cv->setPosition(Ling::Edge::Left, 0.f);
+	cv->setPosition(Ling::Edge::Top, 0.f);
+	cv->setSizePercent(100.f, 100.f);
+	// 补绘回调捕获 flag 指针（成员，生命周期安全）；内容节点重建时会被 beginTool 清空
+	lastToolCanvasDraw = [this, flag, cv, draw]() {
+		auto ctx = cv->startPaint();
+		if (!ctx) return;
+		float w = cv->w, h = cv->h;
+		if (w <= 0.f || h <= 0.f) return;
+		ctx->Clear(D2D1::ColorF(0, 0.0f));
+		draw(ctx, w, h, *flag);
+		cv->finishPaint();
+	};
 	btn->onClick.add([this, flag, cfgKey](Ling::Button* b) {
 		*flag = !*flag;
 		applyToggleStyle(b, *flag);
 		Setting::get()->setToolFlag(curToolId, cfgKey, *flag);
+		if (lastToolCanvasDraw) lastToolCanvasDraw();   // 重绘图标
 		win->onToolStyleChanged();
 	});
 	return btn;

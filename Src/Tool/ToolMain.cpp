@@ -23,10 +23,13 @@ ToolMain::ToolMain(WinHost* win) : Ling::WinBase(), win(win)
 	// 之前触发，改了马上被覆盖，所以这里只记个标记，等建议矩形应用后紧随而来的 WM_SIZE 再动手
 	onDpiChanged.add([this]() { dpiChanged = true; });
 	onSizeChanged.add([this]() {
-		if (!dpiChanged) return;
-		dpiChanged = false;
-		refreshSize();                    //宿主的摆放规则要用宽高，先按新 dpi 把尺寸定下来
-		this->win->layoutTools();
+		if (dpiChanged) {
+			dpiChanged = false;
+			refreshSize();                    //宿主的摆放规则要用宽高，先按新 dpi 把尺寸定下来
+			this->win->layoutTools();
+		}
+		// 自绘图钉图标：DPI 变化后尺寸才就绪，顺手补绘一次
+		if (pinCanvas) drawPinIcon();
 	});
 	createNativeWindow(WS_EX_TOPMOST | WS_EX_TOOLWINDOW, WS_POPUP);
 }
@@ -118,9 +121,65 @@ void ToolMain::onCreated()
 			btns.push_back(btn);
 		}
 	}
+	// 关闭按钮：图标改红色（常态与悬停都保持红色）
+	for (auto b : btns) {
+		if (b->id == L"close") {
+			b->setColor(0xE63946FF);
+			b->setHoverColor(0xE63946FF);
+		}
+	}
+	// 图钉按钮：iconfont 没有实心图钉字形，去掉字形，盖一张自绘画布画实心图钉
+	for (auto b : btns) {
+		if (b->id != L"pin") continue;
+		b->setText(L"");
+		auto cv = b->makeChild<Ling::Canvas>();
+		cv->setPositionType(Ling::Position::Absolute);
+		cv->setPosition(Ling::Edge::Left, 0.f);
+		cv->setPosition(Ling::Edge::Top, 0.f);
+		cv->setSizePercent(100.f, 100.f);
+		pinCanvas = cv;
+		break;
+	}
 	// 初始图标按填充状态摆对（箭头/序号默认实心，矩形/椭圆默认空心）
 	updateShapeIcon();
+	// 图钉：尺寸可能还没就绪，先画一次，后续 onSizeChanged 会补绘
+	if (pinCanvas) drawPinIcon();
 	show();
+}
+
+void ToolMain::drawPinIcon()
+{
+	if (!pinCanvas) return;
+	auto ctx = pinCanvas->startPaint();
+	if (!ctx) return;
+	float w = pinCanvas->w, h = pinCanvas->h;
+	if (w <= 0.f || h <= 0.f) return;
+	ctx->Clear(D2D1::ColorF(0, 0.0f));
+	auto d2d = Ling::D2D::get();
+	Microsoft::WRL::ComPtr<ID2D1SolidColorBrush> b;
+	ctx->CreateSolidColorBrush(D2D1::ColorF(0x333333FF), b.GetAddressOf());
+	float cx = w / 2.f, cy = h / 2.f;
+	float s = std::min(w, h) * 0.30f;
+	float headR = s * 0.17f;
+	float headCy = cy - s * 0.30f;
+	// 圆头
+	ctx->FillEllipse(D2D1::Ellipse(D2D1::Point2F(cx, headCy), headR, headR), b.Get());
+	// 针：从圆头下缘到下方尖端（实心三角形）
+	D2D1_POINT_2F pts[3] = {
+		{ cx - headR * 0.9f, headCy + headR * 0.5f },
+		{ cx + headR * 0.9f, headCy + headR * 0.5f },
+		{ cx, cy + s * 0.55f }
+	};
+	Microsoft::WRL::ComPtr<ID2D1PathGeometry> path;
+	d2d->d2dFactory->CreatePathGeometry(path.GetAddressOf());
+	Microsoft::WRL::ComPtr<ID2D1GeometrySink> sink;
+	path->Open(sink.GetAddressOf());
+	sink->BeginFigure(pts[0], D2D1_FIGURE_BEGIN_FILLED);
+	sink->AddLines(&pts[1], 2);
+	sink->EndFigure(D2D1_FIGURE_END_CLOSED);
+	sink->Close();
+	ctx->FillGeometry(path.Get(), b.Get());
+	pinCanvas->finishPaint();
 }
 
 void ToolMain::applyNormalStyle(Ling::Button* btn)

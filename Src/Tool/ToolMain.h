@@ -23,6 +23,8 @@ private:
 	void applyNormalStyle(Ling::Button* btn);
 	// 按当前 dpi 把窗口尺寸算出来并应用。构造时算一次，DPI 变了再算一次
 	void refreshSize();
+	// 把实心图钉画到 pinCanvas 上（布局/DPI 变化后尺寸就绪时调用）
+	void drawPinIcon();
 private:
 	WinHost* win;
 	// onDpiChanged 与 onSizeChanged 之间的接力标记，见构造函数里的注释
@@ -35,5 +37,7 @@ private:
 	std::vector<Ling::Button*> btns;
 	// 悬停提示。要 hwnd，所以在 onCreated 里才建得起来
 	std::unique_ptr<Tip> tip;
+	// 图钉按钮的自绘画布（iconfont 没有实心图钉字形，用 Canvas 画一个实心图钉）
+	Ling::Canvas* pinCanvas{ nullptr };
 };
 
