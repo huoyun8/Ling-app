@@ -28,10 +28,6 @@ ToolMain::ToolMain(WinHost* win) : Ling::WinBase(), win(win)
 			refreshSize();                    //宿主的摆放规则要用宽高，先按新 dpi 把尺寸定下来
 			this->win->layoutTools();
 		}
-		// 自绘图标：DPI 变化后尺寸才就绪，顺手补绘一次
-		if (pinCanvas) drawPinIcon();
-		if (rectIconCanvas) drawRectCompoundIcon();
-		if (mosaicIconCanvas) drawMosaicIcon();
 	});
 	createNativeWindow(WS_EX_TOPMOST | WS_EX_TOOLWINDOW, WS_POPUP);
 }
@@ -78,7 +74,7 @@ float ToolMain::getBtnCenterX()
 }
 
 // 主工具图标随填充状态切换：箭头/序号在空心/实心字形间切换。
-// 矩形已改为自绘"空心矩形+空心椭圆"交叠图标（见 drawRectCompoundIcon），不在这里切字形。
+// 矩形已用字体字形"矩形+椭圆交叠"（e691），马赛克/图钉也用字体字形，不在这里切。
 void ToolMain::updateShapeIcon()
 {
 	if (!win || !win->toolSub) return;
@@ -116,7 +112,7 @@ void ToolMain::onCreated()
 			btn->setFlexGrow(1.f);
 			btn->setHoverBg(0xF2F2F2ff);
 			btn->setFontFamily(L"icon");
-			btn->setFontSize(13.f);
+			btn->setFontSize(14.3f);   // 图标字号：13 * 1.1，编辑条高度不变，图标放大
 			btn->onClick.add([this](Ling::Button* btn) {onClick(btn);});
 			tip->bind(btn, Lang::get(std::format(L"tool.{}", id)));
 			btns.push_back(btn);
@@ -129,134 +125,9 @@ void ToolMain::onCreated()
 			b->setHoverColor(0xE63946FF);
 		}
 	}
-	// 图钉按钮：iconfont 没有实心图钉字形，去掉字形，盖一张自绘画布画实心图钉
-	for (auto b : btns) {
-		if (b->id != L"pin") continue;
-		b->setText(L"");
-		auto cv = b->makeChild<Ling::Canvas>();
-		cv->setPositionType(Ling::Position::Absolute);
-		cv->setPosition(Ling::Edge::Left, 0.f);
-		cv->setPosition(Ling::Edge::Top, 0.f);
-		cv->setSizePercent(100.f, 100.f);
-		pinCanvas = cv;
-		break;
-	}
-	// 矩形按钮：矩形/椭圆已合并，主图标换成"空心矩形+空心椭圆交叠"自绘图形
-	for (auto b : btns) {
-		if (b->id != L"rect") continue;
-		b->setText(L"");
-		auto cv = b->makeChild<Ling::Canvas>();
-		cv->setPositionType(Ling::Position::Absolute);
-		cv->setPosition(Ling::Edge::Left, 0.f);
-		cv->setPosition(Ling::Edge::Top, 0.f);
-		cv->setSizePercent(100.f, 100.f);
-		rectIconCanvas = cv;
-		break;
-	}
-	// 马赛克按钮：iconfont 马赛克字形偏长方形，改为自绘正方形马赛克图标
-	for (auto b : btns) {
-		if (b->id != L"mosaic") continue;
-		b->setText(L"");
-		auto cv = b->makeChild<Ling::Canvas>();
-		cv->setPositionType(Ling::Position::Absolute);
-		cv->setPosition(Ling::Edge::Left, 0.f);
-		cv->setPosition(Ling::Edge::Top, 0.f);
-		cv->setSizePercent(100.f, 100.f);
-		mosaicIconCanvas = cv;
-		break;
-	}
-	// 初始图标按填充状态摆对（箭头/序号默认实心）
+	// 初始图标按填充状态摆对（箭头/序号默认实心；矩形/马赛克/图钉直接用字体字形）
 	updateShapeIcon();
-	// 自绘图标：尺寸可能还没就绪，先画一次，后续 onSizeChanged 会补绘
-	if (pinCanvas) drawPinIcon();
-	if (rectIconCanvas) drawRectCompoundIcon();
-	if (mosaicIconCanvas) drawMosaicIcon();
 	show();
-}
-
-void ToolMain::drawPinIcon()
-{
-	if (!pinCanvas) return;
-	auto ctx = pinCanvas->startPaint();
-	if (!ctx) return;
-	float w = pinCanvas->w, h = pinCanvas->h;
-	if (w <= 0.f || h <= 0.f) return;
-	ctx->Clear(D2D1::ColorF(0, 0.0f));
-	auto d2d = Ling::D2D::get();
-	Microsoft::WRL::ComPtr<ID2D1SolidColorBrush> b;
-	ctx->CreateSolidColorBrush(D2D1::ColorF(0x333333FF), b.GetAddressOf());   // 实心图钉，颜色与撤销等图标一致
-	float cx = w / 2.f, cy = h / 2.f;
-	float s = std::min(w, h) * 0.30f;
-	float headR = s * 0.17f;
-	float headCy = cy - s * 0.30f;
-	// 圆头
-	ctx->FillEllipse(D2D1::Ellipse(D2D1::Point2F(cx, headCy), headR, headR), b.Get());
-	// 针：从圆头下缘到下方尖端（实心三角形）
-	D2D1_POINT_2F pts[3] = {
-		{ cx - headR * 0.9f, headCy + headR * 0.5f },
-		{ cx + headR * 0.9f, headCy + headR * 0.5f },
-		{ cx, cy + s * 0.55f }
-	};
-	Microsoft::WRL::ComPtr<ID2D1PathGeometry> path;
-	d2d->d2dFactory->CreatePathGeometry(path.GetAddressOf());
-	Microsoft::WRL::ComPtr<ID2D1GeometrySink> sink;
-	path->Open(sink.GetAddressOf());
-	sink->BeginFigure(pts[0], D2D1_FIGURE_BEGIN_FILLED);
-	sink->AddLines(&pts[1], 2);
-	sink->EndFigure(D2D1_FIGURE_END_CLOSED);
-	sink->Close();
-	ctx->FillGeometry(path.Get(), b.Get());
-	pinCanvas->finishPaint();
-}
-
-// "空心矩形+空心椭圆"交叠图标（矩形/椭圆合并后的主图标，风格与 iconfont 图标一致）
-void ToolMain::drawRectCompoundIcon()
-{
-	if (!rectIconCanvas) return;
-	auto ctx = rectIconCanvas->startPaint();
-	if (!ctx) return;
-	float w = rectIconCanvas->w, h = rectIconCanvas->h;
-	if (w <= 0.f || h <= 0.f) return;
-	ctx->Clear(D2D1::ColorF(0, 0.0f));
-	auto d2d = Ling::D2D::get();
-	Microsoft::WRL::ComPtr<ID2D1SolidColorBrush> b;
-	ctx->CreateSolidColorBrush(D2D1::ColorF(0x333333FF), b.GetAddressOf());
-	float cx = w / 2.f, cy = h / 2.f;
-	float s = std::min(w, h) * 0.26f;
-	// 空心矩形（偏左）
-	D2D1_RECT_F rc{ cx - s * 0.62f, cy - s * 0.72f, cx + s * 0.42f, cy + s * 0.72f };
-	ctx->DrawRectangle(rc, b.Get(), 1.5f);
-	// 空心椭圆（偏右，与矩形交叠）
-	D2D1_ELLIPSE el{ D2D1::Point2F(cx + s * 0.40f, cy), s * 0.50f, s * 0.68f };
-	ctx->DrawEllipse(el, b.Get(), 1.5f);
-	rectIconCanvas->finishPaint();
-}
-
-// 正方形马赛克图标：2x2 小方格网格，整体是正方形，风格与其他图标一致(0x333333)
-void ToolMain::drawMosaicIcon()
-{
-	if (!mosaicIconCanvas) return;
-	auto ctx = mosaicIconCanvas->startPaint();
-	if (!ctx) return;
-	float w = mosaicIconCanvas->w, h = mosaicIconCanvas->h;
-	if (w <= 0.f || h <= 0.f) return;
-	ctx->Clear(D2D1::ColorF(0, 0.0f));
-	Microsoft::WRL::ComPtr<ID2D1SolidColorBrush> b;
-	ctx->CreateSolidColorBrush(D2D1::ColorF(0x333333FF), b.GetAddressOf());
-	float cx = w / 2.f, cy = h / 2.f;
-	float s = std::min(w, h) * 0.34f;   // 正方形外框边长（居中）
-	// 2x2 网格：每个小格一条缝隙隔开，画四个实心小方块
-	float gap = s * 0.16f;
-	float cell = (s - gap) / 2.f;
-	float left = cx - s / 2.f, top = cy - s / 2.f;
-	D2D1_RECT_F cells[4] = {
-		{ left,               top,                left + cell,          top + cell },
-		{ left + cell + gap,  top,                left + s,             top + cell },
-		{ left,               top + cell + gap,   left + cell,          top + s },
-		{ left + cell + gap,  top + cell + gap,   left + s,             top + s },
-	};
-	for (auto& rc : cells) ctx->FillRectangle(rc, b.Get());
-	mosaicIconCanvas->finishPaint();
 }
 
 void ToolMain::applyNormalStyle(Ling::Button* btn)

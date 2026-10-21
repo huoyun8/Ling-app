@@ -23,12 +23,6 @@ private:
 	void applyNormalStyle(Ling::Button* btn);
 	// 按当前 dpi 把窗口尺寸算出来并应用。构造时算一次，DPI 变了再算一次
 	void refreshSize();
-	// 把实心图钉画到 pinCanvas 上（布局/DPI 变化后尺寸就绪时调用）
-	void drawPinIcon();
-	// 把"空心矩形+空心椭圆交叠"图形画到 rectIconCanvas 上（矩形/椭圆合并后的主图标）
-	void drawRectCompoundIcon();
-	// 把正方形马赛克图标画到 mosaicIconCanvas 上（iconfont 马赛克字形偏长方形）
-	void drawMosaicIcon();
 private:
 	WinHost* win;
 	// onDpiChanged 与 onSizeChanged 之间的接力标记，见构造函数里的注释
@@ -37,15 +31,10 @@ private:
 	static constexpr float btnSize{ 32.f };
 	static constexpr float spliterW{ 1.f };
 	std::vector<std::wstring> btnIds = { L"rect",L"arrow",L"number",L"line",L"text",L"mosaic", L"eraser",L"|",L"undo",L"redo",L"|",L"close",L"pin",L"save",L"clipboard" };
-	std::vector<std::wstring> btnCodes = { L"\ue8e8",L"\ue603",L"\ue776",L"\ue601",L"\ue6ec",L"\ue82e",L"\ue6be",L"|",L"\ued85",L"\ued8a",L"|",L"\ue62d",L"\ue6a2",L"\ue608",L"\ue6ad" };
+	// rect=矩形+椭圆交叠(合并主图标) e691，pin=实心图钉 e690，mosaic=正方形马赛克 e692；全部来自 iconfont 字形
+	std::vector<std::wstring> btnCodes = { L"\ue691",L"\ue603",L"\ue776",L"\ue601",L"\ue6ec",L"\ue692",L"\ue6be",L"|",L"\ued85",L"\ued8a",L"|",L"\ue62d",L"\ue690",L"\ue608",L"\ue6ad" };
 	std::vector<Ling::Button*> btns;
 	// 悬停提示。要 hwnd，所以在 onCreated 里才建得起来
 	std::unique_ptr<Tip> tip;
-	// 图钉按钮的自绘画布（iconfont 没有实心图钉字形，用 Canvas 画一个实心图钉）
-	Ling::Canvas* pinCanvas{ nullptr };
-	// 矩形按钮的自绘画布：矩形/椭圆已合并，主图标画"空心矩形+空心椭圆交叠"图形
-	Ling::Canvas* rectIconCanvas{ nullptr };
-	// 马赛克按钮的自绘画布：iconfont 的马赛克字形偏长方形，改为自绘正方形样式
-	Ling::Canvas* mosaicIconCanvas{ nullptr };
 };
 

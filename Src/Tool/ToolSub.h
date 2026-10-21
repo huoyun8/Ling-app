@@ -56,17 +56,14 @@ private:
 	// （fill / semiTransparent / bold / …，同一工具下不能重名）。
 	// onText/offText 是开关两种状态下分别显示的字形（开启用 onText，关闭用 offText）：
 	// 这样图标能随状态切换（实心=开、空心=关），而不只是选中变色。不需要区分时两者传同一字形。
-	Ling::Button* makeToggleBtn(const std::wstring& onText, const std::wstring& offText, bool* flag, const std::wstring& tipKey, const std::wstring& cfgKey, float fontSize = 13.f);
-	// 自绘图标开关：不依赖 iconfont 字形，由 draw(ctx, w, h, 当前状态值) 直接用 D2D 画图标。
-	// 用于 iconfont 里没有、或字形太小/带内线不好看的图标（菱形、实心圆、黑圆白字序号等）。
-	// 状态翻转时重绘图标；内容节点重建后由 layout() 在尺寸就绪时补绘一次（首帧 / DPI 变化）。
-	Ling::Button* makeCanvasToggleBtn(bool* flag, const std::wstring& tipKey, const std::wstring& cfgKey,
-		std::function<void(ID2D1DeviceContext*, float, float, bool)> draw);
+	Ling::Button* makeToggleBtn(const std::wstring& onText, const std::wstring& offText, bool* flag, const std::wstring& tipKey, const std::wstring& cfgKey, float fontSize = 14.3f);
 	// 形状单选按钮（矩形工具里的"空心矩形/空心椭圆"）：点击把 isEllipseShape 设为 value，
 	// 并刷新两个形状按钮的选中配色与填充图标。value=false 选矩形，true 选椭圆。
 	Ling::Button* makeShapeSelectBtn(bool value, const std::wstring& glyph, const std::wstring& tipKey);
-	// 按 isEllipseShape 点亮对应的形状按钮，并重绘填充图标（填充图标要随形状变）
+	// 按 isEllipseShape 点亮对应的形状按钮，并刷新填充按钮图标（填充图标随形状变）
 	void syncShapeSelect();
+	// 刷新矩形/椭圆工具第1键（填充开关）的字形：矩形/空心/实心 与 椭圆/空心/实心 四选一
+	void updateFillIcon();
 	// 每个 show*Tools 开头都要做的事：收提示、清旧内容、记下当前工具，
 	// 再把这个工具存在 config.json 里的滑块值和颜色读回来（读不到就用默认值 / 第一个颜色）。
 	// 滑块的键名与值域查 .cpp 里那张表，id 必须是表里有的（就是 ToolMain 的按钮 id）。
@@ -114,9 +111,8 @@ private:
 	// 当前工具在 config.json 里的组名（即 ToolMain 的按钮 id）与滑块值的键名，
 	// 落盘时要用。没选工具时是空的，此时不该有任何写入。
 	std::wstring curToolId, curSliderKey;
-	// 最近一次自绘开关的补绘回调：捕获了对应 flag 的指针，layout() 尺寸就绪后调用。
-	// 内容节点每次重建（切工具）都会销毁旧画布，beginTool 里要清空它，避免悬空。
-	std::function<void()> lastToolCanvasDraw;
+	// 矩形/椭圆工具第1键（填充开关按钮）：图标随形状+实心/空心联动，由 updateFillIcon 刷新字形
+	Ling::Button* fillBtn{ nullptr };
 	// 矩形工具的两个形状单选按钮（空心矩形 / 空心椭圆），syncShapeSelect 用来点亮选中态
 	Ling::Button* shapeRectBtn{ nullptr }, * shapeEllBtn{ nullptr };
 	// 序号半径的取值范围（逻辑像素）。下限跟着 ShapeNumber 拖拽/滚轮的下限走，

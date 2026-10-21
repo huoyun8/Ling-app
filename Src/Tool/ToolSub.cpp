@@ -36,30 +36,6 @@ namespace {
 		}
 		return nullptr;
 	}
-
-	// ---------- 自绘开关图标（不依赖 iconfont 字形，线条/尺寸与其他图标保持一致） ----------
-	// 矩形：实心=填充 / 空心=描边，颜色与撤销等图标一致(0x333333)
-	void drawRectIcon(ID2D1DeviceContext* ctx, float w, float h, bool solid)
-	{
-		Microsoft::WRL::ComPtr<ID2D1SolidColorBrush> b;
-		ctx->CreateSolidColorBrush(D2D1::ColorF(0x333333FF), b.GetAddressOf());
-		float cx = w / 2.f, cy = h / 2.f;
-		float s = std::min(w, h) * 0.56f;
-		D2D1_RECT_F rc{ cx - s / 2.f, cy - s / 2.f, cx + s / 2.f, cy + s / 2.f };
-		if (solid) ctx->FillRectangle(rc, b.Get());
-		else ctx->DrawRectangle(rc, b.Get(), 1.5f);
-	}
-	// 椭圆：实心=填充 / 空心=描边
-	void drawEllipseIcon(ID2D1DeviceContext* ctx, float w, float h, bool solid)
-	{
-		Microsoft::WRL::ComPtr<ID2D1SolidColorBrush> b;
-		ctx->CreateSolidColorBrush(D2D1::ColorF(0x333333FF), b.GetAddressOf());
-		float cx = w / 2.f, cy = h / 2.f;
-		float rx = std::min(w, h) * 0.32f;
-		D2D1_ELLIPSE el{ D2D1::Point2F(cx, cy), rx, rx };
-		if (solid) ctx->FillEllipse(el, b.Get());
-		else ctx->DrawEllipse(el, b.Get(), 1.5f);
-	}
 }
 
 ToolSub::ToolSub(WinHost* win) :Ling::WinBase(), win(win)
@@ -131,7 +107,7 @@ void ToolSub::beginTool(const std::wstring& id)
 	// 按钮和滑块马上要被销毁，onLeave 不会触发，提示得手动收掉
 	tip->hide();
 	contentNode->removeAllChildren();
-	lastToolCanvasDraw = {};   // 自绘画布随子节点销毁，清掉引用避免悬空
+	fillBtn = nullptr;      // 填充开关按钮随子节点销毁
 	shapeRectBtn = nullptr;    // 形状单选按钮也随子节点销毁
 	shapeEllBtn = nullptr;
 	curToolId = id;
@@ -151,22 +127,41 @@ void ToolSub::beginTool(const std::wstring& id)
 
 void ToolSub::showRectTools()
 {
-	// 矩形/椭圆已合并成一个工具：第1键=填充开关(图标随形状+实心/空心联动)，
-	// 第2键=空心矩形(选矩形)，第3键=空心椭圆(选椭圆)
+	// 矩形/椭圆已合并成一个工具：第1键=填充开关(字形随形状+实心/空心联动)，
+	// 第2键=空心矩形(选矩形)，第3键=空心椭圆(选椭圆)；全部用 iconfont 字形
 	beginTool(L"rect");
 	initSize(3, true);
-	// 第1个：填充开关（实心/空心），图标随当前形状变
-	makeCanvasToggleBtn(&isRectFill, L"tool.rectFill", L"fill",
-		[this](ID2D1DeviceContext* ctx, float w, float h, bool solid) {
-			if (isEllipseShape) drawEllipseIcon(ctx, w, h, solid);
-			else drawRectIcon(ctx, w, h, solid);
-		});
+	// 上次退出前的填充态从配置文件读回来
+	isRectFill = Setting::get()->getToolFlag(curToolId, L"fill", isRectFill);
+	// 第1个：填充开关（实心/空心），字形随当前形状变
+	fillBtn = contentNode->makeChild<Ling::Button>();
+	fillBtn->setHeight(btnSize - 2.5);
+	fillBtn->setFlexGrow(1.f);
+	fillBtn->setFontFamily(L"icon");
+	fillBtn->setFontSize(14.3f);
+	tip->bind(fillBtn, Lang::get(L"tool.rectFill"));
+	fillBtn->onClick.add([this](Ling::Button*) {
+		isRectFill = !isRectFill;
+		Setting::get()->setToolFlag(curToolId, L"fill", isRectFill);
+		updateFillIcon();
+	});
+	updateFillIcon();
 	// 第2/3个：空心矩形 / 空心椭圆 —— 单选形状
 	shapeRectBtn = makeShapeSelectBtn(false, L"\ue8e8", L"tool.rectFill");
 	shapeEllBtn = makeShapeSelectBtn(true, L"\ue6bc", L"tool.ellipseFill");
 	syncShapeSelect();
 	initSlider();
 	initColorBtns();
+}
+
+// 刷新矩形/椭圆工具第1键（填充开关）的字形：按形状+实心/空心四选一
+void ToolSub::updateFillIcon()
+{
+	if (!fillBtn) return;
+	std::wstring g;
+	if (isEllipseShape) g = isRectFill ? L"\ue600" : L"\ue6bc";   // 椭圆实心 / 空心
+	else g = isRectFill ? L"\ue602" : L"\ue8e8";                  // 矩形实心 / 空心
+	fillBtn->setText(g);
 }
 
 // 形状单选按钮：点击把 isEllipseShape 设为 value 并刷新选中态
@@ -177,7 +172,7 @@ Ling::Button* ToolSub::makeShapeSelectBtn(bool value, const std::wstring& glyph,
 	btn->setHeight(btnSize - 2.5);
 	btn->setFlexGrow(1.f);
 	btn->setFontFamily(L"icon");
-	btn->setFontSize(13.f);
+	btn->setFontSize(14.3f);   // 形状单选图标字号：13 * 1.1
 	tip->bind(btn, Lang::get(tipKey));
 	btn->onClick.add([this, value](Ling::Button* b) {
 		isEllipseShape = value;
@@ -197,8 +192,8 @@ void ToolSub::syncShapeSelect()
 		shapeEllBtn->setBg(isEllipseShape ? 0x8C3399FF : 0);
 		shapeEllBtn->setHoverBg(isEllipseShape ? 0x8C3399FF : 0xF2F2F2ff);
 	}
-	// 填充图标随形状变：重绘自绘填充按钮
-	if (lastToolCanvasDraw) lastToolCanvasDraw();
+	// 填充字形随形状变：切换形状后填充开关要跟着改成矩形/椭圆
+	updateFillIcon();
 }
 
 void ToolSub::showEllipseTools()
@@ -219,34 +214,10 @@ void ToolSub::showArrowTools()
 
 void ToolSub::showNumberTools()
 {
-	// 序号的滑块调的是圆半径（ShapeNumber 直接拿 getSliderVal 当 r），不是线宽
+	// 序号开关：开=实心(黑圆白字) e605，关=空心 e776；用 iconfont 字形
 	beginTool(L"number");
 	initSize(1, true);
-	// 自绘序号开关：开=黑圆+白字，关=空心圆+黑字
-	makeCanvasToggleBtn(&isNumberFill, L"tool.numberFill", L"fill",
-		[](ID2D1DeviceContext* ctx, float w, float h, bool solid) {
-			auto d2d = Ling::D2D::get();
-			Microsoft::WRL::ComPtr<ID2D1SolidColorBrush> black, white;
-			ctx->CreateSolidColorBrush(D2D1::ColorF(0x000000FF), black.GetAddressOf());
-			ctx->CreateSolidColorBrush(D2D1::ColorF(0xFFFFFFFF), white.GetAddressOf());
-			float cx = w / 2.f, cy = h / 2.f;
-			float r = std::min(w, h) * 0.34f;
-			Microsoft::WRL::ComPtr<IDWriteTextLayout> tl;
-			d2d->dwriteFactory->CreateTextLayout(L"1", 1, d2d->baseTextFormat.Get(), r * 2, r * 2, tl.ReleaseAndGetAddressOf());
-			if (tl) {
-				tl->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER);
-				tl->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_CENTER);
-				tl->SetFontSize(r * 1.15f, { 0, 1 });
-			}
-			if (solid) {
-				ctx->FillEllipse(D2D1::Ellipse(D2D1::Point2F(cx, cy), r, r), black.Get());
-				if (tl) ctx->DrawTextLayout({ cx - r, cy - r }, tl.Get(), white.Get(), D2D1_DRAW_TEXT_OPTIONS_NONE);
-			}
-			else {
-				ctx->DrawEllipse(D2D1::Ellipse(D2D1::Point2F(cx, cy), r, r), black.Get(), 1.5f);
-				if (tl) ctx->DrawTextLayout({ cx - r, cy - r }, tl.Get(), black.Get(), D2D1_DRAW_TEXT_OPTIONS_NONE);
-			}
-		});
+	makeToggleBtn(L"\ue605", L"\ue776", &isNumberFill, L"tool.numberFill", L"fill");
 	initSlider();
 	initColorBtns();
 }
@@ -273,28 +244,10 @@ void ToolSub::showTextTools()
 void ToolSub::showMosaicTools()
 {
 	// 这两个没有颜色按钮、窗口窄，initSize 要居中对齐到按钮上。
-	// 两个开关按钮：高斯模糊（自绘菱形，实心=开/空心=关）+ 形状（实心矩形=画框/实心圆=手绘）；initSize 按 2 个按钮排
+	// 两个开关按钮：高斯模糊（字体菱形 e693，选中=开）+ 形状（实心矩形=画框/实心圆=手绘）；initSize 按 2 个按钮排
 	beginTool(L"mosaic");
 	initSize(2, false, true);
-	makeCanvasToggleBtn(&isMosaicBlur, L"tool.mosaicBlur", L"blur",
-		[](ID2D1DeviceContext* ctx, float w, float h, bool solid) {
-			auto d2d = Ling::D2D::get();
-			Microsoft::WRL::ComPtr<ID2D1SolidColorBrush> b;
-			ctx->CreateSolidColorBrush(D2D1::ColorF(0x333333FF), b.GetAddressOf());
-			float cx = w / 2.f, cy = h / 2.f;
-			float r = std::min(w, h) * 0.32f;
-			Microsoft::WRL::ComPtr<ID2D1PathGeometry> path;
-			d2d->d2dFactory->CreatePathGeometry(path.GetAddressOf());
-			Microsoft::WRL::ComPtr<ID2D1GeometrySink> sink;
-			path->Open(sink.GetAddressOf());
-			sink->BeginFigure(D2D1::Point2F(cx, cy - r), D2D1_FIGURE_BEGIN_HOLLOW);
-			D2D1_POINT_2F pts[3] = { { cx + r, cy }, { cx, cy + r }, { cx - r, cy } };
-			sink->AddLines(pts, 3);
-			sink->EndFigure(D2D1_FIGURE_END_CLOSED);
-			sink->Close();
-			ctx->DrawGeometry(path.Get(), b.Get(), 1.5f);
-			if (solid) ctx->FillGeometry(path.Get(), b.Get());
-		});
+	makeToggleBtn(L"\ue693", L"\ue693", &isMosaicBlur, L"tool.mosaicBlur", L"blur");
 	// 形状：开=画框(实心矩形)，关=手绘(实心圆)
 	makeToggleBtn(L"\ue602", L"\ue600", &isMosaicRect, L"tool.rectFill", L"rect");
 	initSlider();
@@ -337,8 +290,6 @@ void ToolSub::layout()
 	ctx->Clear(0);
 	paintBorder(ctx);
 	canvas->finishPaint();
-	// 自绘开关图标：尺寸就绪后补绘（首帧 / DPI 变化），否则会一直是空的
-	if (lastToolCanvasDraw) lastToolCanvasDraw();
 }
 
 void ToolSub::onMinMaxInfo(MINMAXINFO* mmi)
@@ -472,42 +423,6 @@ Ling::Button* ToolSub::makeToggleBtn(const std::wstring& onText, const std::wstr
 		b->setText(*flag ? onText : offText);   // 图标随状态切换：实心=开、空心=关
 		applyToggleStyle(b, *flag);
 		Setting::get()->setToolFlag(curToolId, cfgKey, *flag);
-		win->onToolStyleChanged();
-	});
-	return btn;
-}
-
-// 自绘图标开关：画布铺满按钮，draw(ctx, w, h, 状态) 负责画图标。
-// 首帧/DPI 变化时尺寸未就绪 startPaint 拿不到 context，所以在 layout() 里补绘一次
-Ling::Button* ToolSub::makeCanvasToggleBtn(bool* flag, const std::wstring& tipKey, const std::wstring& cfgKey,
-	std::function<void(ID2D1DeviceContext*, float, float, bool)> draw)
-{
-	*flag = Setting::get()->getToolFlag(curToolId, cfgKey, *flag);
-	auto btn = contentNode->makeChild<Ling::Button>();
-	btn->setHeight(btnSize - 2.5);
-	btn->setFlexGrow(1.f);
-	applyToggleStyle(btn, *flag);
-	tip->bind(btn, Lang::get(tipKey));
-	auto cv = btn->makeChild<Ling::Canvas>();
-	cv->setPositionType(Ling::Position::Absolute);
-	cv->setPosition(Ling::Edge::Left, 0.f);
-	cv->setPosition(Ling::Edge::Top, 0.f);
-	cv->setSizePercent(100.f, 100.f);
-	// 补绘回调捕获 flag 指针（成员，生命周期安全）；内容节点重建时会被 beginTool 清空
-	lastToolCanvasDraw = [this, flag, cv, draw]() {
-		auto ctx = cv->startPaint();
-		if (!ctx) return;
-		float w = cv->w, h = cv->h;
-		if (w <= 0.f || h <= 0.f) return;
-		ctx->Clear(D2D1::ColorF(0, 0.0f));
-		draw(ctx, w, h, *flag);
-		cv->finishPaint();
-	};
-	btn->onClick.add([this, flag, cfgKey](Ling::Button* b) {
-		*flag = !*flag;
-		applyToggleStyle(b, *flag);
-		Setting::get()->setToolFlag(curToolId, cfgKey, *flag);
-		if (lastToolCanvasDraw) lastToolCanvasDraw();   // 重绘图标
 		win->onToolStyleChanged();
 	});
 	return btn;
