@@ -1,0 +1,407 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>17.0</VCProjectVersion>
+    <Keyword>Win32Proj</Keyword>
+    <ProjectGuid>{967bc419-6e05-4d12-a5bd-6cf5e5af37c0}</ProjectGuid>
+    <RootNamespace>SnapCore</RootNamespace>
+    <!-- 产物名与 build.sh 对齐成 SnapCore.exe：工程文件名保持 ScreenCapture.vcxproj
+         （上游 MIT 溯源），免得为了改名去动解决方案里的引用路径 -->
+    <TargetName>SnapCore</TargetName>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <IntDir>$(SolutionDir)$(Platform)\$(Configuration)Temp\</IntDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <IntDir>$(SolutionDir)$(Platform)\$(Configuration)Temp\</IntDir>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>NOMINMAX;WIN32_LEAN_AND_MEAN;_CRT_NONSTDC_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+    <Manifest>
+      <EnableSegmentHeap>true</EnableSegmentHeap>
+    </Manifest>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>NOMINMAX;WIN32_LEAN_AND_MEAN;_CRT_NONSTDC_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+    <Manifest>
+      <EnableSegmentHeap>true</EnableSegmentHeap>
+    </Manifest>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>NOMINMAX;WIN32_LEAN_AND_MEAN;_CRT_NONSTDC_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <AdditionalIncludeDirectories>$(ProjectDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>dwmapi.lib;windowsapp.lib;comctl32.lib;imm32.lib;version.lib;comdlg32.lib;ntdll.lib;Userenv.lib;mfplat.lib;mfreadwrite.lib;mfuuid.lib;mf.lib;d3d11.lib;d2d1.lib;dxgi.lib;strmiids.lib;wmcodecdspuuid.lib;windowscodecs.lib;oleaut32.lib;bcrypt.lib;propsys.lib;shcore.lib;runtimeobject.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+    <Manifest>
+      <EnableSegmentHeap>true</EnableSegmentHeap>
+      <EnableDpiAwareness>PerMonitorHighDPIAware</EnableDpiAwareness>
+    </Manifest>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>NOMINMAX;WIN32_LEAN_AND_MEAN;_CRT_NONSTDC_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <AdditionalIncludeDirectories>$(ProjectDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>dwmapi.lib;windowsapp.lib;comctl32.lib;imm32.lib;version.lib;comdlg32.lib;ntdll.lib;Userenv.lib;mfplat.lib;mfreadwrite.lib;mfuuid.lib;mf.lib;d3d11.lib;d2d1.lib;dxgi.lib;strmiids.lib;wmcodecdspuuid.lib;windowscodecs.lib;oleaut32.lib;bcrypt.lib;propsys.lib;shcore.lib;runtimeobject.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+    <Manifest>
+      <EnableSegmentHeap>true</EnableSegmentHeap>
+      <EnableDpiAwareness>PerMonitorHighDPIAware</EnableDpiAwareness>
+    </Manifest>
+  </ItemDefinitionGroup>
+  <!-- ── obj 路径：一条规则，镜像源码目录（改之前先读这段）─────────────────
+       Src/App.cpp        → $(IntDir)App.obj
+       Src/Ui/UiApp.cpp   → $(IntDir)Ui\UiApp.obj
+       Src/Win/WinCap.cpp → $(IntDir)Win\WinCap.obj
+
+       "两个同名文件编进同一个 obj、后编的覆盖先编的" 这个坑，从两头一起根除：
+         1) 文件名本身不重名 —— Src/Ui/ 下的文件一律带 Ui 前缀
+            （UiApp / UiUtil / UiPch），核心层的 App/Util 留在 Src/ 根。
+            新增文件也守这条：不同目录不得出现同名 .cpp。
+         2) obj 路径由源文件路径唯一决定 —— 万一又犯了 1)，
+            也只是两个 obj 各占一格，不会互相覆盖。
+       以前给 Ui\*.cpp 逐个写 ObjectFileName 特判，只堵住已知那一对、规则靠人记账，
+       现在特判全删，只剩 ItemDefinitionGroup 里这一条。
+       ──────────────────────────────────────────────────────────────────── -->
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <ObjectFileName>$(IntDir)%(RelativeDir)%(Filename).obj</ObjectFileName>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="App.cpp" />
+    <ClCompile Include="History.cpp" />
+    <ClCompile Include="Lang.cpp" />
+    <ClCompile Include="main.cpp" />
+    <ClCompile Include="pch.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="Setting.cpp" />
+    <ClCompile Include="Shape\ShapeArrow.cpp" />
+    <ClCompile Include="Shape\ShapeBase.cpp" />
+    <ClCompile Include="Shape\ShapeEllipse.cpp" />
+    <ClCompile Include="Shape\ShapeEraser.cpp" />
+    <ClCompile Include="Shape\ShapeLine.cpp" />
+    <ClCompile Include="Shape\ShapeMosaic.cpp" />
+    <ClCompile Include="Shape\ShapeNumber.cpp" />
+    <ClCompile Include="Shape\ShapeRect.cpp" />
+    <ClCompile Include="Shape\ShapeText.cpp" />
+    
+    <ClCompile Include="Tool\ToolSub.cpp" />
+    <ClCompile Include="Tool\ToolMain.cpp" />
+    <ClCompile Include="Tip.cpp" />
+    <ClCompile Include="Tray.cpp" />
+    <ClCompile Include="Util.cpp" />
+    <ClCompile Include="Win\CutMask.cpp" />
+    <ClCompile Include="Win\CapVideo.cpp" />
+    <ClCompile Include="Win\WinPin.cpp" />
+    <ClCompile Include="Win\WinHost.cpp" />
+    <ClCompile Include="Win\WinCap.cpp" />
+    <ClCompile Include="Win\WinQr.cpp" />
+    <ClCompile Include="Win\WinQrVerify.cpp" />
+    <ClCompile Include="Win\VfBox.cpp" />
+    <ClCompile Include="Win\ZipKill.cpp" />
+    <ClCompile Include="Hash\FileHash.cpp" />
+    <ClCompile Include="Qr\QrCodec.cpp" />
+    <ClCompile Include="Win\cgif\cgif.c">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <CompileAs>CompileAsC</CompileAs>
+    </ClCompile>
+    <ClCompile Include="Win\cgif\cgif_raw.c">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <CompileAs>CompileAsC</CompileAs>
+    </ClCompile>
+    <ClCompile Include="Win\cgif\cgif_rgb.c">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <CompileAs>CompileAsC</CompileAs>
+    </ClCompile>
+    <ClCompile Include="Qr\third_party\qrencode\bitstream.c">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <CompileAs>CompileAsC</CompileAs>
+    </ClCompile>
+    <ClCompile Include="Qr\third_party\qrencode\mask.c">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <CompileAs>CompileAsC</CompileAs>
+    </ClCompile>
+    <ClCompile Include="Qr\third_party\qrencode\mmask.c">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <CompileAs>CompileAsC</CompileAs>
+    </ClCompile>
+    <ClCompile Include="Qr\third_party\qrencode\mqrspec.c">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <CompileAs>CompileAsC</CompileAs>
+    </ClCompile>
+    <ClCompile Include="Qr\third_party\qrencode\qrencode.c">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <CompileAs>CompileAsC</CompileAs>
+    </ClCompile>
+    <ClCompile Include="Qr\third_party\qrencode\qrinput.c">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <CompileAs>CompileAsC</CompileAs>
+    </ClCompile>
+    <ClCompile Include="Qr\third_party\qrencode\qrspec.c">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <CompileAs>CompileAsC</CompileAs>
+    </ClCompile>
+    <ClCompile Include="Qr\third_party\qrencode\rsecc.c">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <CompileAs>CompileAsC</CompileAs>
+    </ClCompile>
+    <ClCompile Include="Qr\third_party\qrencode\split.c">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <CompileAs>CompileAsC</CompileAs>
+    </ClCompile>
+    <ClCompile Include="Qr\third_party\quirc\quirc.c">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <CompileAs>CompileAsC</CompileAs>
+    </ClCompile>
+    <ClCompile Include="Qr\third_party\quirc\decode.c">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <CompileAs>CompileAsC</CompileAs>
+    </ClCompile>
+    <ClCompile Include="Qr\third_party\quirc\identify.c">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <CompileAs>CompileAsC</CompileAs>
+    </ClCompile>
+    <ClCompile Include="Qr\third_party\quirc\version_db.c">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <CompileAs>CompileAsC</CompileAs>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Ui\Button.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="Ui\Canvas.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="Ui\Color.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="Ui\D2D.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="Ui\Label.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="Ui\Layout.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="Ui\Node.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="Ui\Slider.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="Ui\SvgPath.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="Ui\Text.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="Ui\TextBox.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="Ui\UiApp.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="Ui\UiUtil.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="Ui\WinBase.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Ui\Button.h" />
+    <ClInclude Include="Ui\Canvas.h" />
+    <ClInclude Include="Ui\Color.h" />
+    <ClInclude Include="Ui\D2D.h" />
+    <ClInclude Include="Ui\Label.h" />
+    <ClInclude Include="Ui\Layout.h" />
+    <ClInclude Include="Ui\Node.h" />
+    <ClInclude Include="Ui\Slider.h" />
+    <ClInclude Include="Ui\SvgPath.h" />
+    <ClInclude Include="Ui\Text.h" />
+    <ClInclude Include="Ui\TextBox.h" />
+    <ClInclude Include="Ui\Ui.h" />
+    <ClInclude Include="Ui\UiApp.h" />
+    <ClInclude Include="Ui\UiPch.h" />
+    <ClInclude Include="Ui\UiUtil.h" />
+    <ClInclude Include="Ui\WinBase.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="Res\Resource.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="Res\logo.ico" />
+    <Image Include="Res\SnapCore.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="App.h" />
+    <ClInclude Include="History.h" />
+    <ClInclude Include="Lang.h" />
+    <ClInclude Include="pch.h" />
+    <ClInclude Include="Prof.h" />
+    <ClInclude Include="Setting.h" />
+    <ClInclude Include="Shape\ShapeArrow.h" />
+    <ClInclude Include="Shape\ShapeBase.h" />
+    <ClInclude Include="Shape\ShapeEllipse.h" />
+    <ClInclude Include="Shape\ShapeEraser.h" />
+    <ClInclude Include="Shape\ShapeLine.h" />
+    <ClInclude Include="Shape\ShapeMosaic.h" />
+    <ClInclude Include="Shape\ShapeNumber.h" />
+    <ClInclude Include="Shape\ShapeRect.h" />
+    <ClInclude Include="Shape\ShapeText.h" />
+    <ClInclude Include="Tool\ToolMetrics.h" />
+    <ClInclude Include="Tool\ToolSub.h" />
+    <ClInclude Include="Tool\ToolMain.h" />
+    <ClInclude Include="Tip.h" />
+    <ClInclude Include="Tray.h" />
+    <ClInclude Include="Util.h" />
+    <ClInclude Include="Win\CutMask.h" />
+    <ClInclude Include="Win\WinPin.h" />
+    <ClInclude Include="Win\WinHost.h" />
+    <ClInclude Include="Win\WinCap.h" />
+    <ClInclude Include="Win\WinQr.h" />
+    <ClInclude Include="Win\VfBox.h" />
+    <ClInclude Include="Win\ZipKill.h" />
+    <ClInclude Include="Win\CapVideo.h" />
+    <ClInclude Include="Win\cgif\cgif.h" />
+    <ClInclude Include="Win\cgif\cgif_raw.h" />
+    <ClInclude Include="Res\Icons.generated.h" />
+    <ClInclude Include="Hash\FileHash.h" />
+    <ClInclude Include="Qr\QrCodec.h" />
+    <ClInclude Include="Qr\third_party\qrencode\bitstream.h" />
+    <ClInclude Include="Qr\third_party\qrencode\mask.h" />
+    <ClInclude Include="Qr\third_party\qrencode\mmask.h" />
+    <ClInclude Include="Qr\third_party\qrencode\mqrspec.h" />
+    <ClInclude Include="Qr\third_party\qrencode\qrencode.h" />
+    <ClInclude Include="Qr\third_party\qrencode\qrencode_inner.h" />
+    <ClInclude Include="Qr\third_party\qrencode\qrinput.h" />
+    <ClInclude Include="Qr\third_party\qrencode\qrspec.h" />
+    <ClInclude Include="Qr\third_party\qrencode\rsecc.h" />
+    <ClInclude Include="Qr\third_party\qrencode\split.h" />
+    <ClInclude Include="Qr\third_party\quirc\quirc.h" />
+    <ClInclude Include="Qr\third_party\quirc\quirc_internal.h" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

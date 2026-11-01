@@ -1,0 +1,355 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="源文件">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="头文件">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
+    <Filter Include="资源文件">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="App.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="History.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Lang.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="main.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="pch.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Setting.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Shape\ShapeArrow.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Shape\ShapeBase.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Shape\ShapeEllipse.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Shape\ShapeEraser.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Shape\ShapeLine.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Shape\ShapeMosaic.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Shape\ShapeNumber.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Shape\ShapeRect.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Shape\ShapeText.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Tool\ToolSub.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Tool\ToolMain.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Tip.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Tray.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Update.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Util.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Win\CutMask.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Win\WinPin.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Win\WinHost.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Win\WinCap.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Win\WinQr.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Win\WinQrVerify.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Win\VfBox.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Win\ZipKill.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Hash\FileHash.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Qr\QrCodec.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Win\cgif\cgif.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Win\cgif\cgif_raw.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Win\cgif\cgif_rgb.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Qr\third_party\qrencode\bitstream.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Qr\third_party\qrencode\mask.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Qr\third_party\qrencode\mmask.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Qr\third_party\qrencode\mqrspec.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Qr\third_party\qrencode\qrencode.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Qr\third_party\qrencode\qrinput.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Qr\third_party\qrencode\qrspec.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Qr\third_party\qrencode\rsecc.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Qr\third_party\qrencode\split.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Qr\third_party\quirc\quirc.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Qr\third_party\quirc\decode.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Qr\third_party\quirc\identify.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Qr\third_party\quirc\version_db.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Ui\Button.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Ui\Canvas.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Ui\Color.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Ui\D2D.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Ui\Label.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Ui\Layout.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Ui\Node.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Ui\Slider.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Ui\SvgPath.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Ui\Text.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Ui\TextBox.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Ui\UiApp.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Ui\UiUtil.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Ui\WinBase.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="Res\Resource.rc">
+      <Filter>资源文件</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="Res\logo.ico">
+      <Filter>资源文件</Filter>
+    </Image>
+    <Image Include="Res\SnapCore.ico">
+      <Filter>资源文件</Filter>
+    </Image>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Ui\Button.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Ui\Canvas.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Ui\Color.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Ui\D2D.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Ui\Label.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Ui\Layout.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Ui\Node.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Ui\Slider.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Ui\SvgPath.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Ui\Text.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Ui\TextBox.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Ui\Ui.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Ui\UiApp.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Ui\UiPch.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Ui\UiUtil.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Ui\WinBase.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="App.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="History.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Lang.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="pch.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Prof.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Setting.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Shape\ShapeArrow.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Shape\ShapeBase.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Shape\ShapeEllipse.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Shape\ShapeEraser.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Shape\ShapeLine.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Shape\ShapeMosaic.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Shape\ShapeNumber.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Shape\ShapeRect.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Shape\ShapeText.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Tool\ToolMetrics.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Tool\ToolSub.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Tool\ToolMain.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Tip.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Tray.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Util.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Win\CutMask.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Win\WinPin.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Win\WinHost.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Win\WinCap.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Win\WinQr.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Win\VfBox.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Win\ZipKill.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Hash\FileHash.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Qr\QrCodec.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>
