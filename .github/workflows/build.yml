@@ -1,0 +1,34 @@
+name: build
+
+on:
+  push:
+    branches: [ master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      # 目录名 SnapOCR → 默认出带 OCR 引擎的完整版（exe 约 32MB）
+      - name: Build SnapOCR (with OCR)
+        shell: bash
+        run: |
+          cd SnapOCR
+          ./build.sh
+
+      # obj 目录分品牌隔离，无需 clean，直接切宏出轻量版（exe 约 1.3MB）
+      - name: Build SnapCore (without OCR)
+        shell: bash
+        run: |
+          cd SnapOCR
+          SNAPCORE_WITH_OCR=0 ./build.sh
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: SnapOCR-bin
+          path: SnapOCR/build/bin/*.exe
+          if-no-files-found: error

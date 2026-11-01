@@ -34,10 +34,33 @@
 set -euo pipefail
 export MSYS2_ARG_CONV_EXCL='*'
 
-# ---------- 工具链 ----------
-VC_ROOT="/c/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/VC/Tools/MSVC/14.44.35207"
+# ---------- 工具链（自动探测：vswhere 定位 VS，再取最高版本 MSVC / SDK）----------
+VSWHERE="/c/Program Files (x86)/Microsoft Visual Studio/Installer/vswhere.exe"
+VS_PATH=""
+if [ -f "$VSWHERE" ]; then
+    FOUND=$("$VSWHERE" -latest -products '*' \
+        -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 \
+        -property installationPath | head -1)
+    [ -n "$FOUND" ] && VS_PATH=$(cygpath -u "$FOUND")
+fi
+# 兜底：常见安装路径（vswhere 缺失或没装 C++ 组件时）
+if [ -z "$VS_PATH" ] || [ ! -d "$VS_PATH" ]; then
+    for cand in \
+        "/c/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools" \
+        "/c/Program Files/Microsoft Visual Studio/2022/Community" \
+        "/c/Program Files/Microsoft Visual Studio/2022/Professional" \
+        "/c/Program Files/Microsoft Visual Studio/2022/Enterprise"; do
+        [ -d "$cand" ] && VS_PATH="$cand" && break
+    done
+fi
+[ -d "$VS_PATH" ] || { echo "!! 未找到 Visual Studio 2022（需要『使用 C++ 的桌面开发』组件）"; exit 1; }
+
+VC_ROOT=$(ls -d "$VS_PATH/VC/Tools/MSVC/"* 2>/dev/null | sort -V | tail -1)
 SDK_ROOT="/c/Program Files (x86)/Windows Kits/10"
-SDK_VER="10.0.22621.0"
+SDK_VER=$(ls "$SDK_ROOT/Include" 2>/dev/null | sort -V | tail -1)
+[ -d "$VC_ROOT" ] || { echo "!! 未找到 MSVC 工具链：$VS_PATH/VC/Tools/MSVC"; exit 1; }
+[ -d "$SDK_ROOT/Include/$SDK_VER" ] || { echo "!! 未找到 Windows SDK（$SDK_ROOT/Include/$SDK_VER）"; exit 1; }
+echo "[toolchain] MSVC $(basename "$VC_ROOT")  /  SDK $SDK_VER"
 
 CL="$VC_ROOT/bin/Hostx64/x64/cl.exe"
 LINK="$VC_ROOT/bin/Hostx64/x64/link.exe"
