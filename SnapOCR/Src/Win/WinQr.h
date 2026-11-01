@@ -236,6 +236,9 @@ private:
 	// —— 二维码页 ——
 	void refreshQr();
 	void invalidateQrBitmap();
+	// 按 side 渲染 qrBmp 并落到缓存 DIB 上（side 变了才重建 DIB）。
+	// 预览 blit 是 1:1，所以 side 就是 drawQrPage 算出的显示尺寸
+	void renderQrDib(int side);
 	bool renderQrToPixels(int side, std::vector<BYTE>& out);
 	// 抓一块屏幕像素：负责收/放主界面、防"按 Esc 取消后主界面再也回不来"、
 	// 建抓屏窗口。work 在像素到位的同一帧里回调（UI 线程），像素归它所有。
@@ -487,6 +490,9 @@ private:
 	// —— 二维码状态 ——
 	QrBitmap qrBmp;
 	HBITMAP qrHbmp{ nullptr };       // 由 qrBmp 渲染出的 DIB，省得每帧 CreateBitmap
+	// qrHbmp 的边长：预览走 1:1 blit，所以它 = drawQrPage 的显示尺寸（DPI 变了才重建）；
+	// 「下载 / 复制」仍按 kQrPixels 全分辨率单独渲染，不走这张 DIB
+	int qrHbmpSide{ 0 };
 	// 渲染二维码用的像素缓冲 + 上面对应的 DIB 内存首地址。三者（qrPx / qrHbmp /
 	// qrDibBits）都只建一次、之后逐帧复用：输入框每敲一个字都会触发一次重渲染，
 	// 每帧新分配 1.44MB 的缓冲在这一条路径上是纯浪费

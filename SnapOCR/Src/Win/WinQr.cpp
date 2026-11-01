@@ -583,6 +583,8 @@ WinQr::~WinQr()
 	if (qrHbmp) {
 		DeleteObject(qrHbmp);
 		qrHbmp = nullptr;
+		qrHbmpSide = 0;
+		qrDibBits = nullptr;
 	}
 	for (auto& kv : fontCache) {
 		if (kv.second) DeleteObject(kv.second);
@@ -1977,10 +1979,16 @@ void WinQr::drawQrPage(HDC dc)
 	HDC src = CreateCompatibleDC(dc);
 	if (!src) return;
 	HGDIOBJ old = SelectObject(src, qrHbmp);
-	// COLORONCOLOR 不做插值：二维码模块边缘必须是一刀切的，糊一点就多一片误读
-	const int oldMode = SetStretchBltMode(dc, COLORONCOLOR);
-	StretchBlt(dc, x, y, side, side, src, 0, 0, kQrPixels, kQrPixels, SRCCOPY);
-	SetStretchBltMode(dc, oldMode);
+	// 显示尺寸变了（首帧 / DPI 变化）：预览位图按显示尺寸重渲 —— 位图与 blit 严格
+	// 1:1，屏幕上的码和编码结果逐像素一致。不再用 StretchBlt 缩放：COLORONCOLOR
+	// 的最近邻缩列会把高版本码的整列模块抹掉，屏幕上那张码本身就残了，截屏识别
+	// （qrGrabWithFallback）解不出就是这么来的
+	if (qrHbmpSide != side) {
+		renderQrDib(side);
+		SelectObject(src, qrHbmp);   // renderQrDib 可能重建了 HBITMAP，重新选中
+	}
+	if (!qrHbmp) { SelectObject(src, old); DeleteDC(src); return; }
+	BitBlt(dc, x, y, side, side, src, 0, 0, SRCCOPY);
 	SelectObject(src, old);
 	DeleteDC(src);
 }
@@ -2492,7 +2500,7 @@ void WinQr::refreshQr()
 	if (text.empty()) text = Lang::get(L"qr.placeholder");
 
 	// 容错级别照草料的策略：加了 Logo 自动切 H（30%，Logo 遮挡也能扫）；
-	// 没 Logo 走 Auto（按"优先小码型"规则在 M 15% / Q 25% 间自动选，见 QrCodec.cpp）
+	// 没 Logo 走 Auto（草料同款「优先紧凑码型」，在 M 15% / Q 25% 间自动选，见 QrCodec.cpp）
 	const int ec = logoPixels.empty() ? QrEcAuto : QrEcH;
 	const bool ok = qrEncode(toUtf8(text), qrBmp, ec);
 	// qrEncode 失败时不动 qrBmp：这里读到的 size 就是"上一张还在不在"，
@@ -2518,28 +2526,39 @@ void WinQr::invalidateQrBitmap()
 		if (qrHbmp) { DeleteObject(qrHbmp); qrHbmp = nullptr; }
 		qrDibBits = nullptr;
 		qrPx.clear();
+		qrHbmpSide = 0;
 		return;
 	}
-	// 输入框每敲一个字都会走到这里。原来每次都新分配一条 600×600×4 = 1.44MB 的
-	// 临时像素缓冲、再新建一张同样大小的 DIB，敲十几个字符就是几十次 MB 级分配 ——
-	// 抖起来既掉帧又磨堆（private 峰值上去就不下来）。改成两条缓冲都只建一次：
-	// 像素缓冲是成员（qrPx），DIB 也存在就一直复用，尺寸变了才重建
-	if (!qrPx.empty() && qrPx.size() != (size_t)kQrPixels * kQrPixels * 4) qrPx.clear();
-	if (!renderQrToPixels(kQrPixels, qrPx)) return;
+	// 预览位图按显示尺寸（qrHbmpSide，drawQrPage 置位）1:1 渲染。曾经固定渲 600
+	// 再用 COLORONCOLOR 缩到显示尺寸 —— 最近邻缩放会整列整行地丢采样，版本一高
+	// 模块就被抹掉，屏幕上的码本身就残了，截屏识别自然解不出。
+	// 首帧还没有显示尺寸时先按 kQrPixels 渲一版占位，drawQrPage 马上会按实际尺寸重建
+	renderQrDib(qrHbmpSide > 0 ? qrHbmpSide : kQrPixels);
+}
+
+// 按 side 渲染 qrBmp 并落到缓存 DIB 上。side 变了才重建 DIB，
+// 否则只重渲染像素再拷进去 —— 输入框每敲一个字都会走到，分配要省着花
+void WinQr::renderQrDib(int side)
+{
+	if (qrBmp.size <= 0 || side <= 0) return;
+	if (!qrPx.empty() && qrPx.size() != (size_t)side * side * 4) qrPx.clear();
+	if (!renderQrToPixels(side, qrPx)) return;
 
 	// 必须用 CreateDIBSection + 负高度：CreateBitmap 建的 32bpp 位图是自下而上的，
 	// 直接把 top-down 的 BGRA 丢进去会让二维码上下翻转，定位图案一翻就解不出来了
 	void* bits = nullptr;
-	if (!qrHbmp) {
+	if (!qrHbmp || qrHbmpSide != side) {
+		if (qrHbmp) { DeleteObject(qrHbmp); qrHbmp = nullptr; }
 		BITMAPINFO bmi{};
 		bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
-		bmi.bmiHeader.biWidth = kQrPixels;
-		bmi.bmiHeader.biHeight = -kQrPixels;
+		bmi.bmiHeader.biWidth = side;
+		bmi.bmiHeader.biHeight = -side;
 		bmi.bmiHeader.biPlanes = 1;
 		bmi.bmiHeader.biBitCount = 32;
 		bmi.bmiHeader.biCompression = BI_RGB;
 		qrHbmp = CreateDIBSection(nullptr, &bmi, DIB_RGB_COLORS, &bits, nullptr, 0);
-		if (!qrHbmp) return;
+		if (!qrHbmp) { qrDibBits = nullptr; qrHbmpSide = 0; return; }
+		qrHbmpSide = side;
 	}
 	else {
 		bits = qrDibBits;

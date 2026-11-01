@@ -24,12 +24,13 @@ bool qrEncode(const std::string& utf8, QrBitmap& out, int ec)
 		QRcode_free(qr);
 		return true;
 	};
-	// 版本号 = (边长 - 17) / 4
-	const auto versionOf = [](const QrBitmap& b) { return (b.size - 17) / 4; };
 
 	// 加 Logo：草料默认最高容错 H（30%），Logo 遮挡也能扫。
 	// 内容超出 H 的容量编不出来时退回下面的自动选择 —— 有码可扫比容错打满更重要
 	if (ec == QrEcH && encode(QR_ECLEVEL_H, out)) return true;
+
+	// 版本号 = (边长 - 17) / 4
+	const auto versionOf = [](const QrBitmap& b) { return (b.size - 17) / 4; };
 
 	// QrEcAuto：草料同款「优先保持码型紧凑」。基线 = L 的最小版本：
 	//   Q 与基线同版本 → Q（容错更高又不涨尺寸）；Q 升了版本而 M 没升 → M；

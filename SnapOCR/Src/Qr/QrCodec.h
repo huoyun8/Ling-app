@@ -18,8 +18,8 @@ struct QrBitmap
 };
 
 // 容错级别：数值与 libqrencode 的 QR_ECLEVEL_* 对齐（L=0 M=1 Q=2 H=3）。
-// QrEcAuto = 参照草料「优先保持码型紧凑」的自动规则：
-// Q 不升版本 → Q(25%)；Q 升版本而 M 不升 → M(15%)；连 M 都得升版本 → 回 Q
+// QrEcAuto = 草料同款「优先紧凑码型」：Q 不升版本 → Q；Q 升版本而 M 不升 → M；
+// 连 M 都升 → 回 Q
 enum QrEcLevel { QrEcAuto = -1, QrEcM = 1, QrEcQ = 2, QrEcH = 3 };
 
 // 把内容编成二维码。utf8 为空或内容太长会失败返回 false。
