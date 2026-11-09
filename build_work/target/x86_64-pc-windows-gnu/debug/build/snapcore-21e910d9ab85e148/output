@@ -1,0 +1,3 @@
+cargo:rerun-if-changed=build.rs
+cargo:rustc-env=APP_NAME=SnapCore
+cargo:warning=未找到 rc.exe / windres，exe 将不带图标
