@@ -1,0 +1,21 @@
+# 交叉编译配置：在 Linux / macOS 上构建 Windows 产物（GNU 工具链）
+#
+#   cargo build --release --target x86_64-pc-windows-gnu
+#   cargo build --release --target x86_64-pc-windows-gnu --features ocr
+#
+# 需要先安装目标标准库与 MinGW 工具链：
+#   rustup target add x86_64-pc-windows-gnu
+#   # Debian/Ubuntu:
+#   sudo apt install gcc-mingw-w64-x86-64
+#   # macOS:
+#   brew install mingw-w64
+#
+# 在 Windows 本机按 README 用 build.ps1 / MSVC 构建时，不会读取下面的
+# target 段，互不影响。
+[target.x86_64-pc-windows-gnu]
+linker = "x86_64-w64-mingw32-gcc"
+ar = "x86_64-w64-mingw32-ar"
+
+[target.i686-pc-windows-gnu]
+linker = "i686-w64-mingw32-gcc"
+ar = "i686-w64-mingw32-ar"

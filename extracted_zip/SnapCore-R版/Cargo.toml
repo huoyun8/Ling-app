@@ -1,0 +1,76 @@
+[package]
+name = "snapcore"
+version = "0.1.0"
+edition = "2021"
+description = "SnapCore / SnapOCR - 单一源码树，按 ocr 特性构建两个产物"
+
+# ───────────────────────────── OCR 开关 ─────────────────────────────
+# 单一源码树 + 编译期特性
+#   不带 --features ocr -> SnapCore.exe（约 1.3MB，无「文字识别」页签）
+#   带   --features ocr -> SnapOCR.exe （约 33MB，模型 gzip 后内嵌）
+# 两者共用同一份 src/ 与 assets/，品牌名由 build.rs 注入；assets 里的 4 个 OCR
+# 资产只在不带 ocr 特性时闲置，不参与压缩、不参与链接。
+#
+# DirectML.dll 不内嵌：把它放到 %LOCALAPPDATA%\<品牌>_ocr 就自动切 GPU，
+# 不放则走 CPU 后端。
+[features]
+default = []
+ocr = ["dep:flate2"]
+
+[dependencies.winapi]
+version = "0.3"
+features = [
+    "winuser",
+    "winbase",
+    "wincon",
+    "processthreadsapi",
+    "tlhelp32",
+    "synchapi",
+    "handleapi",
+    "errhandlingapi",
+    "libloaderapi",
+    "wingdi",
+    "shellapi",
+    "memoryapi",
+    "winreg",
+    "winnt",
+    "commdlg",
+    # 截图保存落桌面：Known Folder API（桌面可能被重定向到 OneDrive，不能拼 %USERPROFILE%）
+    "knownfolders",
+    "shlobj",
+    "combaseapi",
+    "objbase",
+    "powrprof",
+    "minwinbase",
+    "sysinfoapi",
+    "reason",
+    "securitybaseapi",
+    "ntdef",
+    # 文件校验页：MD5/SHA1 走 bcrypt，取文件版本走 winver，
+    # 取修改时间走 fileapi + timezoneapi
+    "bcrypt",
+    "winver",
+    "fileapi",
+    "timezoneapi",
+    # OCR 读帧超时：PeekNamedPipe 轮询可用字节（见 ocr_impl::pipe_read_exact）
+    "namedpipeapi",
+]
+
+[dependencies]
+qrcode = "0.14"
+rqrr = "0.9"
+image = { version = "0.25", default-features = false, features = ["png", "jpeg", "bmp", "gif"] }
+# 运行时解压 build.rs 压好的 OCR 资产。optional：OCR 关掉时这个 crate 根本不参与编译。
+flate2 = { version = "1", optional = true }
+
+# 构建期：OCR 资产压缩 + 用 rc.exe 直接编译 assets/logo.ico 为资源（资源 ID 1）。
+# 不用 winres —— 它内部要调 reg.exe 查注册表，受限环境会被拦截。
+[build-dependencies]
+flate2 = "1"
+
+[profile.release]
+opt-level = "z"
+lto = "fat"
+codegen-units = 1
+panic = "abort"
+strip = "symbols"

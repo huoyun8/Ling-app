@@ -1,0 +1,84 @@
+// =============================================================================
+// 备用二维码解码实现：rxing（纯 Rust 二维码解码库）
+// =============================================================================
+// 主路径是 modules/qr.rs 里的 rqrr 版（decode_qr / decode_at / rqrr_scan / otsu）。
+// 遇到 rqrr 解不出的极端码（大面积 LOGO、强透视、极低对比度实拍图）时，按下面三步切到本实现。
+//
+// ① Cargo.toml 的 [dependencies] 里加这一行（原样可复制）：
+//      rxing = { version = "0.9", default-features = false, features = ["qrcode", "decoders", "encoding_rs"] }
+//
+// ② 用本文件下半部分替换 modules/qr.rs 里的两个函数：decode_qr 与 decode_at
+//    （连同函数上方"识别"分节注释一起替换）。其余函数 rqrr_scan / otsu 直接删掉。
+//
+// ③ 摘掉 rqrr 的预处理与引用：
+//    - Cargo.toml 里的 rqrr = "0.9"
+//    - src/prelude.rs 里的 pub use rqrr::PreparedImage;
+//    - modules/qr.rs 顶部识别说明同步为本实现
+//    然后 cargo check --release 与 cargo check --release --features ocr 双配置 0 error / 0 warning。
+//
+// 说明：decode_qr(bgra, w, h) 的签名与调用点（selection.rs 的框选识别）不变，换实现不用动页面。
+// =============================================================================
+
+use crate::prelude::*;
+
+use rxing::common::{GlobalHistogramBinarizer, HybridBinarizer};
+use rxing::{BarcodeFormat, BinaryBitmap, DecodeHints, Luma8Source, MultiFormatReader, Reader};
+
+// -------------------------------------------------------------------------------
+// 识别（ZXing / rxing）
+// -------------------------------------------------------------------------------
+
+/// 解码截图区域（BGRA）。两轮二值化 × 1~4 倍最近邻放大。
+pub(crate) fn decode_qr(bgra: &[u8], w: u32, h: u32) -> Option<String> {
+    if w == 0 || h == 0 || bgra.len() < (w as usize * h as usize * 4) { return None; }
+
+    let mut hints = DecodeHints::default();
+    // 只开 QR：省掉一维码等开销，也不会把截图里的条纹误报成条码
+    hints.PossibleFormats = Some([BarcodeFormat::QR_CODE].into_iter().collect());
+    hints.TryHarder = Some(true);
+    hints.AlsoInverted = Some(true);
+    // 生成侧写的是 UTF-8 字节流且不带 ECI，必须按 UTF-8 解，别落到字符集猜测
+    hints.CharacterSet = Some("UTF-8".to_string());
+
+    for local in [true, false] {
+        for s in 1..=4u32 {
+            let (dw, dh) = (w * s, h * s);
+            if dw > 4096 || dh > 4096 { continue; } // 上限保护：内存与耗时可控
+            if let Some(t) = decode_at(bgra, w, h, dw, dh, local, &hints) { return Some(t); }
+        }
+        // 大图再加一次半尺寸尝试（QR 定位对缩放不敏感）
+        if w >= 400 && h >= 400 {
+            if let Some(t) = decode_at(bgra, w, h, w / 2, h / 2, local, &hints) { return Some(t); }
+        }
+    }
+    None
+}
+
+fn decode_at(
+    bgra: &[u8], w: u32, h: u32, dw: u32, dh: u32,
+    local_average: bool, hints: &DecodeHints,
+) -> Option<String> {
+    // 最近邻采样 + 亮度加权公式（r*306 + g*601 + b*117）>> 10
+    let mut luma = vec![0u8; (dw * dh) as usize];
+    for y in 0..dh {
+        let sy = (y as usize * h as usize) / dh as usize;
+        let row = y as usize * dw as usize;
+        for x in 0..dw {
+            let sx = (x as usize * w as usize) / dw as usize;
+            let i = (sy * w as usize + sx) * 4;
+            luma[row + x as usize] = ((bgra[i + 2] as u32 * 306
+                + bgra[i + 1] as u32 * 601
+                + bgra[i] as u32 * 117) >> 10) as u8;
+        }
+    }
+    let src = Luma8Source::new_with_slice(&luma, dw, dh).ok()?;
+    let mut reader = MultiFormatReader::default();
+    let res = if local_average {
+        let mut bmp = BinaryBitmap::new(HybridBinarizer::new(src));
+        reader.decode_with_hints(&mut bmp, hints)
+    } else {
+        let mut bmp = BinaryBitmap::new(GlobalHistogramBinarizer::new(src));
+        reader.decode_with_hints(&mut bmp, hints)
+    };
+    res.ok().map(|r| r.getText().to_string()).filter(|t| !t.is_empty())
+}
