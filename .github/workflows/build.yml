@@ -12,23 +12,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # 目录名 SnapOCR → 默认出带 OCR 引擎的完整版（exe 约 32MB）
-      - name: Build SnapOCR (with OCR)
-        shell: bash
-        run: |
-          cd SnapOCR
-          ./build.sh
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
 
-      # obj 目录分品牌隔离，无需 clean，直接切宏出轻量版（exe 约 1.3MB）
-      - name: Build SnapCore (without OCR)
-        shell: bash
-        run: |
-          cd SnapOCR
-          SNAPCORE_WITH_OCR=0 ./build.sh
+      # 一套源码两个产物：SnapCore（轻量）/ SnapOCR（内置 OCR 引擎）
+      - name: Build SnapCore + SnapOCR
+        shell: pwsh
+        run: ./build.ps1
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: SnapOCR-bin
-          path: SnapOCR/build/bin/*.exe
+          name: SnapCore-bin
+          path: dist/*.exe
           if-no-files-found: error

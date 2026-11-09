@@ -1,105 +1,92 @@
-﻿SnapOCR —— C 版（C++20 + 直接调 Win32，单文件免安装）
-==============================================================
+SnapCore / SnapOCR
+==================
 
-解压后只有一个目录 SnapOCR\，一份源码出两个产品，只差一个编译宏：
+Windows 10/11 轻量工具：单文件分发、免安装、不联网、仅简体中文。同一份源码按
+Cargo feature `ocr` 出两个产物，两者可同机安装、同时运行，配置互不覆盖。
 
-  SnapOCR.exe   默认产物（./build.sh）。带 OCR 引擎，33MB（PP-OCRv6 引擎与模型
-                已内嵌，首次识别时释放到 %LOCALAPPDATA%\SnapOCR\ocr）。
-                页签：文字识别（首页）/ 二维码 / 文件校验 / 文件改名 / 定时关机 / 设置
+一、功能
+--------
+· 截图标注：框选（窗口/控件/像素吸附）、矩形/椭圆/箭头/标号/直线/文本/马赛克
+  （含高斯模糊）/橡皮擦、填充与取色、撤销重做、贴屏、保存 PNG、复制到剪贴板。
+· 录屏：MP4 / GIF；MP4 可录系统声音与麦克风，上限 10 分钟；GIF 上限 2 分钟。
+· 文字识别（仅 SnapOCR）：框选取字，四档排版（自动合并/每框一行/合并成一段/
+  原始顺序），支持查找、复制、清空与实时字数。
+· 二维码：文本实时生成、框选或上传图片识别、LOGO 合成、复制与下载 PNG。
+· 文件校验：拖入或选择文件，算 MD5 / SHA-256 / CRC32，支持批量、进度、停止与保存。
+· 文件改名：五组规则（转换/前后缀/扩展名/序号/删除）、表格就地编辑、过滤、
+  两阶段改名、整体回滚与撤销。
+· 定时关机：倒计时或指定钟点（可每天续排），暂停保留进度，最后 10 秒置顶提示。
+· 设置：截图/视频保存目录、开机自启、截图时隐藏、关闭到托盘、单实例、
+  三行快捷键录入（互为排他）、压缩包防多开与一键关闭。
 
-  SnapCore.exe  SNAPCORE_WITH_OCR=0 ./build.sh。不带 OCR 引擎，1.6MB。
-                页签：二维码 / 文件校验 / 文件改名 / 定时关机 / 设置（没有「文字识别」）
+启动后默认只挂托盘，双击托盘图标显示主界面；`--auto-start` / `--enter=tray`
+只挂托盘，`--enter=shot` 直接进框选，`--enter=pin` 框选后贴屏，
+`--auto-quit=true` 完成后退出。主界面任意状态按 Esc 收进托盘。
 
-这份源码是完整的，两个产品都从它编出（Core 就是同一份代码关掉 OCR 宏）。
-包内两个 exe 均已用本机 MSVC 14.44 编译并随包提供，解压即可运行；要自己重编
-就是 ./build.sh，无需任何工程文件或额外下载。
+二、结构
+--------
+  Cargo.toml          单一包，`ocr` 特性控制是否内嵌 OCR 引擎与资产
+  build.rs            按 feature 注入品牌名、压缩 OCR 资产、编译图标资源
+  build.ps1           双版本一键构建
+  src/
+    main.rs           入口、崩溃日志、单实例、托盘、主窗口与消息分派
+    prelude.rs        外部导入的唯一入口
+    ui.rs             颜色/尺寸/字号/DPI 常量与页面布局
+    modules/
+      capture.rs      截屏与 DIB 复用          selection.rs  框选遮罩与放大镜
+      editor/         标注编辑器（paint / shapes / text / canvas / options）
+      toolbar.rs tooltip.rs pin.rs record/ finalize.rs icons.rs
+      qr.rs           二维码生成/识别/LOGO 合成
+      ocr.rs          文字识别引擎（仅 ocr 特性）
+      verify.rs filehash.rs   文件校验与摘要
+      rename.rs rn_pinyin.rs  文件改名与拼音转换
+      shutdown.rs settings.rs config.rs  定时关机、设置、配置读写
+    recvideo.rs       MP4（Media Foundation）编码
+    smart_erase.rs    智能消除
+    ocr_layout.rs     OCR 结果排版
+  assets/             logo.ico + OCR 进程 exe + 模型/字典（不带 ocr 特性时不参与构建）
+  dist/               SnapCore.exe / SnapOCR.exe
 
+三、构建
+--------
+在工程根目录执行：
+  .\build.ps1                 两个版本都出
+  .\build.ps1 -Core           只出 SnapCore
+  .\build.ps1 -Ocr            只出 SnapOCR
+  .\build.ps1 -Clean          清理后重建
 
-一、直接运行
-------------
-双击 exe 只是挂个托盘图标（老习惯，故意不弹窗）。再双击一次 exe，已有实例
-会把主界面亮出来 —— 这是原设计的启动方式，不是没反应。
+等价的 cargo 命令：
+  cargo build --release                                   → SnapCore（约 1.69MB）
+  cargo build --release --features ocr --target-dir target-ocr
+                                                          → SnapOCR（约 33.4MB）
 
-默认热键：F1 截图 / F2 识别 / F10 显示或收起主界面。
-两个版本默认热键相同，同时运行时后启动的那个注册不上，请在「设置」里改成
-不同组合键（配置各存各的，互不影响）。
+在 Linux / macOS 上交叉编译 Windows 产物：
+  rustup target add x86_64-pc-windows-gnu
+  sudo apt install gcc-mingw-w64-x86-64   # macOS: brew install mingw-w64
+  ./build.sh            # 等价 build.ps1，产物在 dist/SnapCore.exe、dist/SnapOCR.exe
+  ./build.sh core       # 只出 SnapCore
+  ./build.sh ocr        # 只出 SnapOCR
+  ./build.sh clean      # 清理
 
-两版可以同机安装、同时运行：窗口类名（SnapCore_Main / SnapOCR_Main）、
-单实例标识、配置目录（%APPDATA%\SnapCore 与 %APPDATA%\SnapOCR）、
-注册表启动项、任务栏 AppUserModelID 全部按品牌分开。
+  `.cargo/config.toml` 已配好 GNU 工具链链接器；build.rs 在找不到 rc.exe 时
+  会自动改用 windres 编译图标，交叉产物同样带 exe 图标。
 
+品牌名由 build.rs 注入，窗口类名、单实例互斥体、注册表项与 %APPDATA% 目录
+均随品牌派生。OCR 资产压缩后内嵌 exe，首次识别释放到
+%LOCALAPPDATA%\<品牌>_ocr 复用；把 DirectML.dll 放到该目录可自动切 GPU，
+不放则走 CPU 后端。
 
-二、重新编译
-------------
-需要 VS2022 BuildTools（MSVC 14.44）+ Windows SDK 10.0.22621。
-build.sh 直接驱动 cl.exe / link.exe / rc.exe，不走 msbuild（本机安全策略会拦）。
-
-  cd SnapOCR
-  ./build.sh                       # 产物 build/bin/SnapOCR.exe（内嵌模型，约 33MB）
-
-  SNAPCORE_WITH_OCR=0 ./build.sh   # 产物 build/bin/SnapCore.exe（纯工具版，1.6MB）
-
-不带环境变量时按**目录名**判定：目录名以 SnapOCR 开头就走带引擎那版，把目录
-改名（不以 SnapOCR 开头）即默认出纯工具版。两套中间产物分放在
-build/obj-SnapCore 与 build/obj-SnapOCR，一个目录里来回切产品不会串 obj。
-
-  ./build.sh clean                 # 全量重建（约 5~6 分钟）
-  SNAPCORE_OCR_EMBED=0 ./build.sh  # 带引擎但不把模型打进 exe（开发用，
-                                   # 运行时要往 exe 旁边放 ocr\ 目录）
-
-注：脚本的调试信息开关是 /Z7（写进 obj），不依赖 PDB 服务 —— 被安全策略拦住
-mspdbsrv 的机器上也不会再报 C1090。
-
-
-三、这一版的变化（v4：修 bug + 代码精简）
----------------
-功能口径不变，只修 bug、删死代码。全部改动均与上一版逐处 1:1 行为比对，
-每文件 /W4 单独编译零告警（SnapOCR、SnapCore 两侧），最终全量构建通过 ——
-包内两个 exe 就是本次构建的产物。
-
-修掉的主要 bug：
-
-  重做顺序反向 —— 画 1~5 再逐步撤销（按 5→4→3→2→1 收，正确），重做却按
-  5→4→3→2→1 恢复（与撤销顺序同向），现改为按 1→2→3→4→5 镜像恢复；
-  带参数启动残留僵尸进程 —— --auto-quit / --enter 下主窗创建失败被无视，
-  留下看不见的后台进程，现失败即退出；
-  截图取像时序 —— GetDIBits 在位图仍选入内存 DC 时调用，违反 MSDN 前提，
-  部分驱动下会取到乱行像素，已按要求先解除选中再取；
-  OCR 线程 —— 迟到的识别完成消息会去 join 新一轮线程并把旧结果填进新页面；
-  识别线程启动失败无任何提示；空结果框在控件 0×0 时会挂上收不掉的滚动条；
-  悬空指针 —— 删除标注时宿主上的悬停 / 编辑 / 拖拽指针未全部断开；
-  录屏选项不落盘 —— MP4/GIF、系统声、麦克风的选择此前每次截图都打回默认，
-  现与其它工具一样写入配置。
-
-代码精简：自写代码 31,525 → 31,137 行（净 -388）。删掉的约 900 行全是永不执行
-的死分支（贴图窗里到不了的编辑器路径、失效的清理链、只写不读的状态等）与
-重复实现；为修 bug 新增的约 500 行都在关键路径上。
-
-版本号按品牌分开：SnapCore 是 1.0（纯工具版，图标换成 SnapCore.ico），
-SnapOCR 是 2.0（带识别引擎，仍用原 logo.ico）。
-
-四、目录说明
-------------
-build.sh                构建脚本（cl / link / rc 直驱）
-README.txt              本文件
-ReadMe.md               完整功能说明（每一页每个按钮）
-版本规范.md             命名规则、版本叠加、改名边界、版本记录
-交接单.md               开发交接记录（构建口径 / 实现要点 / 限制 / 缺陷结论）
-LICENSE
-Src/                    全部源码
-  Brand.h               品牌宏（一处定义全程序生效）
-  App / Setting / Tray / Tip / Lang / History / Util / main
-  Win/                  WinQr（主界面）、WinQrVerify、VfBox、WinCap、CutMask、
-                        WinPin、WinHost、CapVideo、cgif、WinSettingShortcut、ZipKill、
-                        WinRename（文件改名页）、RnList（改名页的自绘列表，
-                        RnPinyinData.h 是它的拼音数据）
-  Hash/                 MD5 / SHA256 / CRC32 / 版本号 / 修改时间
-  Ocr/                  OcrEngine（与子进程通信）、OcrLayout（排版四档）
-                        —— SnapCore 版不编译这两个
-  Qr/                   quirc 解码 + libqrencode 编码
-  Shape/ Tool/ Ui/      标注元素、工具条、自绘 UI 框架
-  Res/                  Resource.rc（图标 / 语言包 / 版本信息 / OCR 资源）
-  Res/ocr/              引擎本体 snow-ocr-process.exe + PP-OCRv6 det/rec 模型 + 字典
-                        —— 只在 SnapOCR 目录里
-Lang/zh-CN.json         编进 exe 的中文语言包
-tools/                  ocrcmp（模型 LZMS 压缩打包）、layout_test（排版离线自测）
+四、已知限制与技术债
+--------------------
+· exe 动态链接 VC 运行库（VCRUNTIME140.dll + UCRT）。若要真正的零运行库依赖，
+  可在 `.cargo/config.toml` 给 `x86_64-pc-windows-msvc` 加
+  `-C target-feature=+crt-static` 后重新构建（体积略增）。
+· SnapOCR 首次识别会把 ocr-process.exe 与模型释放到本地目录并启动子进程，
+  属于"单文件分发、多进程运行"。
+· 识别流程使用手动框选；智能选区（悬停预览 / 边缘吸附 / Tab 与滚轮循环）
+  只在标注截图流程中启用。
+· 主窗口锁定尺寸，不支持最大化。
+· 二维码识别用 rqrr（1~4 倍放大 + Otsu 预处理）；`reference/qr_rxing.rs.txt`
+  是备用解码实现，不参与编译。
+· 当前源码中没有 TODO / FIXME 标注的未修复缺陷；交互层的已知回归点以
+  "必须 / 不能 / 否则 / 会崩" 等注释形式留在对应代码处。
