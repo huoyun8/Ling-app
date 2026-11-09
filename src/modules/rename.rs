@@ -84,10 +84,7 @@ pub const ID_AFFIX_ON: usize = 5540;
 // 名字与 常量同名，值取自上表，主线落 ui.rs 时按同一组键名登记
 // 几何常量统一登记在 `ui::layout::rename`（本文件不另起常量，只做别名）
 use crate::ui::layout::rename as geo;
-
-fn sc(v: i32) -> i32 {
-    ui::sc(v)
-}
+use crate::ui::sc;
 
 // 文字（与 Lang/zh-CN.json 的 rn 段一一对应）
 const T_TOOL: [(&str, &str); 7] = [
@@ -329,9 +326,7 @@ fn st_mut<R>(f: impl FnOnce(&mut State) -> R) -> R {
 }
 
 // —————————————————————— 基础工具 ——————————————————————
-fn wide(s: &str) -> Vec<u16> {
-    s.encode_utf16().chain(Some(0)).collect()
-}
+use crate::wide;
 
 fn ctl(id: usize) -> HWND {
     st(|s| {

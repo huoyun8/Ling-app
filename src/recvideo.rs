@@ -141,10 +141,7 @@ unsafe fn attr_guid(obj: *mut c_void, key: &Guid, v: &Guid) -> Hr {
     f(obj, key, v)
 }
 
-fn wide(s: &str) -> Vec<u16> {
-    use std::os::windows::ffi::OsStrExt;
-    std::ffi::OsStr::new(s).encode_wide().chain(std::iter::once(0)).collect()
-}
+use crate::wide;
 
 // ——————————————————————— MP4 写出器 ———————————————————————
 struct Mp4Writer {
