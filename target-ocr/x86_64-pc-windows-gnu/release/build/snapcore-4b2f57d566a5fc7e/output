@@ -1,0 +1,8 @@
+cargo:rerun-if-changed=build.rs
+cargo:rustc-env=APP_NAME=SnapOCR
+cargo:rerun-if-changed=/workspace/assets/ocr-process.exe
+cargo:rerun-if-changed=/workspace/assets/PP-OCRv6_det_small.onnx
+cargo:rerun-if-changed=/workspace/assets/PP-OCRv6_rec_small.onnx
+cargo:rerun-if-changed=/workspace/assets/ppocrv6_dict.txt
+cargo:rustc-link-arg=/workspace/target-ocr/x86_64-pc-windows-gnu/release/build/snapcore-4b2f57d566a5fc7e/out/resource.o
+cargo:rerun-if-changed=/workspace/assets/logo.ico

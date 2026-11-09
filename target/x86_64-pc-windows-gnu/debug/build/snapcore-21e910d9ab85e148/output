@@ -1,0 +1,4 @@
+cargo:rerun-if-changed=build.rs
+cargo:rustc-env=APP_NAME=SnapCore
+cargo:rustc-link-arg=/workspace/target/x86_64-pc-windows-gnu/debug/build/snapcore-21e910d9ab85e148/out/resource.o
+cargo:rerun-if-changed=/workspace/assets/logo_core.ico
