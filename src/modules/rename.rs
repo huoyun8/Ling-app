@@ -1912,89 +1912,13 @@ fn pick_folder() {
 // —————————————————————— 执行 / 撤销 / 重置 ——————————————————————
 fn run_rename() {
     hide_editor();
-    // 候选：未完成、已勾选、名字有变且合法。
-    // 「多行同名」在执行时补 1、2、3（只落在真正改出的文件名上，列表照旧显示用户输入）；
-    // 目标已被盘上别的文件占用的冲突不参与 —— 不能自动顶掉一个无关文件。
-    let total = st(|s| s.rows.len());
     let picks: Vec<(usize, String, String)> = st(|s| {
-        let mut want: HashMap<String, usize> = HashMap::new();
-        for r in s.rows.iter() {
-            if r.done || !r.checked || r.new_name == r.name || !valid_name(&r.new_name) {
-                continue;
-            }
-            if !matches!(r.status, Stat::Ready | Stat::Conflict) {
-                continue;
-            }
-            let dk = lower_all(&r.dir);
-            *want
-                .entry(format!("{}|{}", dk, lower_all(&r.new_name)))
-                .or_insert(0) += 1;
-        }
-        // 本批会让出的源名：只算真正参与这次改名的行（否则给一个不动的行
-        // 预留了名字，编号时以为可用，落盘却因为文件还在而失败）
-        let mut freed: HashSet<String> = HashSet::new();
-        for r in s.rows.iter() {
-            if r.done || !r.checked || r.new_name == r.name || !valid_name(&r.new_name) {
-                continue;
-            }
-            if !matches!(r.status, Stat::Ready | Stat::Conflict) {
-                continue;
-            }
-            let dk = lower_all(&r.dir);
-            let key = format!("{}|{}", dk, lower_all(&r.new_name));
-            let dup = want.get(&key).copied().unwrap_or(0) > 1;
-            if r.status == Stat::Conflict && !dup {
-                continue;
-            }
-            freed.insert(format!("{}|{}", dk, lower_all(&r.name)));
-        }
-        let mut next: HashMap<String, usize> = HashMap::new();
-        let mut used: HashSet<String> = HashSet::new();
-        let mut picks = Vec::new();
-        for (i, r) in s.rows.iter().enumerate() {
-            if r.done || !r.checked || r.new_name == r.name || !valid_name(&r.new_name) {
-                continue;
-            }
-            if !matches!(r.status, Stat::Ready | Stat::Conflict) {
-                continue;
-            }
-            let dk = lower_all(&r.dir);
-            let key = format!("{}|{}", dk, lower_all(&r.new_name));
-            let dup = want.get(&key).copied().unwrap_or(0) > 1;
-            if r.status == Stat::Conflict && !dup {
-                continue;
-            }
-            let mut final_name = r.new_name.clone();
-            if dup || used.contains(&key) {
-                let base = base_of_name(&r.new_name).to_string();
-                let ext = ext_of_name(&r.new_name).to_string();
-                let bk = format!("{}|{}", dk, lower_all(&base));
-                let mut n = *next.get(&bk).unwrap_or(&1);
-                loop {
-                    let cand = if ext.is_empty() {
-                        format!("{}{}", base, n)
-                    } else {
-                        format!("{}{}.{}", base, n, ext)
-                    };
-                    let ck = format!("{}|{}", dk, lower_all(&cand));
-                    if !used.contains(&ck)
-                        && !want.contains_key(&ck)
-                        && (freed.contains(&ck) || !file_exists(&join(&r.dir, &cand)))
-                    {
-                        final_name = cand;
-                        next.insert(bk, n + 1);
-                        break;
-                    }
-                    n += 1;
-                    if n > 100_000 {
-                        break;
-                    }
-                }
-            }
-            used.insert(format!("{}|{}", dk, lower_all(&final_name)));
-            picks.push((i, join(&r.dir, &r.name), join(&r.dir, &final_name)));
-        }
-        picks
+        s.rows
+            .iter()
+            .enumerate()
+            .filter(|(_, r)| !r.done && r.checked && r.status == Stat::Ready && r.new_name != r.name)
+            .map(|(i, r)| (i, join(&r.dir, &r.name), join(&r.dir, &r.new_name)))
+            .collect()
     });
     if picks.is_empty() {
         toast("没有可改名的文件");
@@ -2002,18 +1926,15 @@ fn run_rename() {
     }
     let moves: Vec<(String, String)> = picks.iter().map(|(_, a, b)| (a.clone(), b.clone())).collect();
     // skipped 是"这一批一个没动的行数"：未勾选、已改过、同名、状态不可改都算进去
-    let skip = total.saturating_sub(picks.len());
+    let skip = st(|s| s.rows.len()).saturating_sub(picks.len());
     match move_all(&moves) {
         None => {
             let mut undo_add: Vec<(String, String)> = Vec::new();
             st_mut(|s| {
                 for (i, src, dst) in &picks {
                     undo_add.push((dst.clone(), src.clone()));
-                    // 落盘用的是补位后的名字（可能带 1、2、3），行里也改成它
-                    let landed = dst.rsplit('\\').next().unwrap_or(dst).to_string();
                     let r = &mut s.rows[*i];
-                    r.name = landed.clone();
-                    r.new_name = landed;
+                    r.name = r.new_name.clone();
                     r.manual.clear();
                     r.done = true;
                     r.status = Stat::Done;
@@ -2136,15 +2057,7 @@ fn reset_rules() {
         }
         // 起点换了，上一轮的撤销记录就对不上了
         s.undos.clear();
-        // 过滤也是"刚导入"状态的一部分：回到全部格式，否则旧关键字会把行藏起来
-        s.fmt_on.clear();
-        s.fmt_text.clear();
     });
-    st_mut(|s| s.syncing = true);
-    set_text(ctl(ID_FILTER), T_ALL_FMT);
-    st_mut(|s| s.syncing = false);
-    // 等价于刚导入：格式候选按现在的扩展名重建
-    rebuild_filter();
     apply_rules();
     if !p.is_null() {
         unsafe {
