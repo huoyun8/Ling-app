@@ -768,10 +768,19 @@ pub(crate) extern "system" fn anno_img_proc(hwnd: HWND, msg: UINT, wp: WPARAM, l
                         ps.push((ix, iy));
                     }
                     {
-                        // 落笔前快照：复用已有缓冲，不再每次重新分配一张整图
+                        // 落笔前快照：复用已有缓冲，不再每次重新分配一张整图。
+                        // 空闲时那张整图可能正躺在前缀底图里（新的一笔已让它作废），
+                        // 直接借过来，两者始终只占一份内存
+                        let need = ANNO_IMG.lock_ok().len();
+                        ANNO_BASE_N.store(-1, Ordering::Relaxed);
                         let mut pre = ANNO_PRE.lock_ok();
+                        if pre.len() != need {
+                            let mut base = ANNO_BASE.lock_ok();
+                            if base.len() == need { *pre = std::mem::take(&mut *base); }
+                            pre.resize(need, 0);
+                        }
                         let img = ANNO_IMG.lock_ok();
-                        if pre.len() == img.len() { pre.copy_from_slice(&img); } else { *pre = img.clone(); }
+                        pre.copy_from_slice(&img);
                     }
                     *ANNO_PREV_BOX.lock_ok() = (0, 0, 0, 0);
                     ANNO_DRAG.store(true, Ordering::Relaxed);
@@ -1373,6 +1382,22 @@ pub(crate) extern "system" fn anno_img_proc(hwnd: HWND, msg: UINT, wp: WPARAM, l
                         anno_push_undo();
                         // 记下这一条的几何：之后光标停上去要亮 8 个手柄（同时写入图元表）
                         anno_last_set(tool);
+                        // 马赛克/橡皮的样式滑块要反复重算像素：落笔前的画面正好是
+                        // 「底图 + 除最后一条外的全部图元」，直接把它当前缀底图留着，
+                        // 之后拖滑块每移动一格只重烘这一条，不必整表重放。
+                        // 其它工具的样式改动只重画矢量，不值当为此常驻一张整图。
+                        if tool == 6 || tool == 7 {
+                            let idx = ANNO_LAST.lock_ok().as_ref().map(|l| l.idx).unwrap_or(-1);
+                            let need = (w as usize) * (h as usize) * 4;
+                            let mut pre = ANNO_PRE.lock_ok();
+                            if idx >= 0 && pre.len() == need
+                                && idx as usize + 1 == ANNO_SHAPES.lock_ok().len() {
+                                *ANNO_BASE.lock_ok() = std::mem::take(&mut *pre);
+                                ANNO_BASE_N.store(idx, Ordering::Relaxed);
+                            } else {
+                                ANNO_BASE_N.store(-1, Ordering::Relaxed);
+                            }
+                        }
                     } else {
                         // 没成笔（只是抖了一下）：把占位色退回落笔前，别在图上留一块品红
                         if tool == 6 || tool == 7 {

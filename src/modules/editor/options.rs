@@ -790,6 +790,13 @@ pub(crate) unsafe fn anno_sub_hit_down(x: i32, y: i32, cw: i32) -> bool {
             if !hw.is_null() { InvalidateRect(hw, std::ptr::null_mut(), 0); }
         } else if hit_slider {
             let (sx, _sy, sw, _sh) = slider;
+            // 马赛克/橡皮改的是像素效果：先把"改之前"的底图准备好，
+            // 整段拖动都复用它，每移动一格只重烘最后一条
+            let t = ANNO_TOOL.load(Ordering::Relaxed);
+            if (t == 6 || t == 7)
+                && ANNO_LAST.lock_ok().as_ref().map_or(false, |l| l.tool == t) {
+                anno_base_ensure();
+            }
             let mn = ANNO_OPT_MIN.load(Ordering::Relaxed).max(0);
             let mx = ANNO_OPT_MAX.load(Ordering::Relaxed).max(mn + 1);
             // Slider::onDown → setValue(posToValue)：轨道两端各让开一个圆点半径 r=3
