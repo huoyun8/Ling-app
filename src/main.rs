@@ -2166,13 +2166,11 @@ fn main() {
         let h = CreateMutexW(std::ptr::null_mut(), 1, m.as_ptr());
         let existed = !h.is_null() && GetLastError() == 183;
         if single && existed {
-            // 再次双击：调到前台显示（不再隐藏）
+            // 再次双击桌面图标：切换主界面显示/隐藏，与单击托盘图标同一入口
             let title = wide(APP_NAME);
             let hwnd = FindWindowW(std::ptr::null(), title.as_ptr());
             if !hwnd.is_null() {
-                ShowWindow(hwnd, SW_SHOW);
-                SetForegroundWindow(hwnd);
-                SetFocus(hwnd); // 焦点还给窗口本身，让输入框占位提示显示
+                PostMessageW(hwnd, WM_TRAYICON, 0, WM_LBUTTONUP as LPARAM);
             }
             return;
         }
