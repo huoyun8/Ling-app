@@ -1588,16 +1588,20 @@ fn compose(row: &Row, ordinal: i32, r: &Rules) -> String {
 fn recalc() {
     let rules = read_rules();
     // 就地在原行上算：原来先克隆整表、再逐行重建一个 probe Row、再克隆回写，
-    // 每敲一个键对每行要做 4~5 次字符串分配；千级文件时输入明显发涩
-    st_mut(|s| {
-        for (i, r) in s.rows.iter_mut().enumerate() {
-            if r.done {
-                r.new_name = r.name.clone();
-            } else {
-                r.new_name = compose(r, i as i32 + 1, &rules);
-            }
+    // 每敲一个键对每行要做 4~5 次字符串分配；千级文件时输入明显发涩。
+    //
+    // 算的时候必须把 rows 整张挪出来：compose 内部要回读规则状态（st），
+    // 在 st_mut 的借用里再 borrow 就是 RefCell 重入 panic，panic=abort 会当场退出进程
+    //（拖入文件 → add_paths → apply_rules → 这里，必崩）
+    let mut rows = st_mut(|s| std::mem::take(&mut s.rows));
+    for (i, r) in rows.iter_mut().enumerate() {
+        if r.done {
+            r.new_name = r.name.clone();
+        } else {
+            r.new_name = compose(r, i as i32 + 1, &rules);
         }
-    });
+    }
+    st_mut(|s| s.rows = rows);
 
     let mut dup: HashMap<String, i32> = HashMap::new();
     let mut sources: HashSet<String> = HashSet::new();
