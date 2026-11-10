@@ -790,6 +790,15 @@ pub(crate) unsafe fn anno_sub_hit_down(x: i32, y: i32, cw: i32) -> bool {
             if !hw.is_null() { InvalidateRect(hw, std::ptr::null_mut(), 0); }
         } else if hit_slider {
             let (sx, _sy, sw, _sh) = slider;
+            // 滑块要改的是"当前工具这一组的最后一条"时才需要底图。
+            // 底图有效就沿用到整个拖动过程：之后每移动一格只重烘这一条，
+            // 不再整表重放（标注一多，智能消除/模糊会重算前面每一条，拖动条就卡住）
+            let t = ANNO_TOOL.load(Ordering::Relaxed);
+            let same_group = ANNO_LAST.lock_ok().as_ref().map_or(false, |l| match t {
+                0 => l.tool == 0, 2 => l.tool == 2, 3 => l.tool == 3,
+                4 => l.tool == 4, 6 | 7 => l.tool == t, _ => false,
+            });
+            if same_group { anno_base_ensure(); }
             let mn = ANNO_OPT_MIN.load(Ordering::Relaxed).max(0);
             let mx = ANNO_OPT_MAX.load(Ordering::Relaxed).max(mn + 1);
             // Slider::onDown → setValue(posToValue)：轨道两端各让开一个圆点半径 r=3

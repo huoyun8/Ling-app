@@ -292,6 +292,22 @@ pub(crate) fn anno_base_clear() {
     *ANNO_BASE.lock_ok() = Vec::new();
 }
 
+/// 拖动副条滑块改「最后一条」之前调用：底图有效就直接用（之后每移动一格只重烘这一条），
+/// 无效才整表重放一次。以前每次移动都走重建，标注一多，改一次马赛克/模糊/智能消除
+/// 就把前面所有标注（含每个智能消除的填充计算）全部重算一遍，滑块自然拖不动。
+pub(crate) unsafe fn anno_base_ensure() {
+    let idx = ANNO_LAST.lock_ok().as_ref().map(|l| l.idx).unwrap_or(-1);
+    if idx < 0 { return; }
+    let w = ANNO_W.load(Ordering::Relaxed);
+    let h = ANNO_H.load(Ordering::Relaxed);
+    if w <= 0 || h <= 0 { return; }
+    // 只能改"最后一条"：表里它后面还有别的，说明画面与表已不同步，交给重建
+    if idx as usize + 1 != ANNO_SHAPES.lock_ok().len() { return; }
+    let need = (w as usize) * (h as usize) * 4;
+    if ANNO_BASE_N.load(Ordering::Relaxed) == idx && ANNO_BASE.lock_ok().len() == need { return; }
+    anno_base_prepare();
+}
+
 /// 只把最后一条补画到当前画面。
 /// 用于"落点即定型"的图元（标号）：画面此刻已经等于「底图 + 前面所有图元」，
 /// 再整表重放等于把前面每条都重画一遍，标号越多越慢。
@@ -365,16 +381,23 @@ pub(crate) fn anno_last_clear() {
 /// 盖住手柄、线宽和抗锯齿。悬停亮柄、拖动改几何都只刷这一块，
 /// 不必整窗重绘（4K 下一次整窗合成≈三张整图的拷贝）。
 pub(crate) fn anno_rect_of(l: &AnnoLast) -> (i32, i32, i32, i32) {
-    // 文字的手柄（旋转柄挂在框顶上方）比几何本身大，留足外扩量
-    let m = if l.tool == 8 {
-        ui::dpi::sc(50)
-    } else {
-        l.width.abs().max(8) + ui::dpi::sc(10)
-    };
+    let m = anno_rect_margin(l.tool, l.width);
     (
         l.x0.min(l.x1) - m, l.y0.min(l.y1) - m,
         l.x0.max(l.x1) + m, l.y0.max(l.y1) + m,
     )
+}
+
+/// 重绘外扩量：箭头的头部远长于线宽，按线宽算会把头留在框外
+fn anno_rect_margin(tool: i32, width: i32) -> i32 {
+    let w = width.abs().max(8);
+    if tool == 8 {
+        ui::dpi::sc(50)
+    } else if tool == 2 {
+        w * 6 + ui::dpi::sc(10)
+    } else {
+        w + ui::dpi::sc(10)
+    }
 }
 
 /// 最后一条标注的重绘范围。没有则 None。
@@ -999,9 +1022,13 @@ pub(crate) unsafe fn anno_stroke_styled(tool: i32, r: u8, g: u8, b: u8, width: i
 /// 不是"在旧像素上再画一遍"—— 那样改样式会在旧框上留残影
 pub(crate) unsafe fn anno_shape_redraw(l: &AnnoLast) {
     let mut nl = l.clone();
+    let old;
     {
         let mut sh = ANNO_SHAPES.lock_ok();
-        if nl.idx >= 0 && (nl.idx as usize) < sh.len() {
+        let has = nl.idx >= 0 && (nl.idx as usize) < sh.len();
+        // 改之前的重绘范围：上一帧烘的就是它，局部还原必须连旧位置一起擦
+        old = if has { Some(anno_shape_rect(&sh[nl.idx as usize])) } else { None };
+        if has {
             sh[nl.idx as usize] = AnnoShape::from_last(&nl);
         } else {
             sh.push(AnnoShape::from_last(&nl));
@@ -1009,13 +1036,22 @@ pub(crate) unsafe fn anno_shape_redraw(l: &AnnoLast) {
         }
     }
     *ANNO_LAST.lock_ok() = Some(nl.clone());
-    if anno_redraw_last(&nl) { return; }
+    if anno_redraw_last(&nl, old) { return; }
     anno_rebuild();
 }
 
-/// 只改最后一条时走这里：拷一次前缀底图，再烘这一条。
+/// 图元表里某一条的重绘范围（与 anno_rect_of 同一口径）
+fn anno_shape_rect(s: &AnnoShape) -> (i32, i32, i32, i32) {
+    let m = anno_rect_margin(s.tool, s.width);
+    (
+        s.x0.min(s.x1) - m, s.y0.min(s.y1) - m,
+        s.x0.max(s.x1) + m, s.y0.max(s.y1) + m,
+    )
+}
+
+/// 只改最后一条时走这里：从前缀底图还原它占的那块，再烘这一条。
 /// 前提是「表里恰好只有它还没进底图」，且当前没有文字在编辑（编辑中的文字不入底图）。
-unsafe fn anno_redraw_last(l: &AnnoLast) -> bool {
+unsafe fn anno_redraw_last(l: &AnnoLast, old: Option<(i32, i32, i32, i32)>) -> bool {
     let w = ANNO_W.load(Ordering::Relaxed);
     let h = ANNO_H.load(Ordering::Relaxed);
     if w <= 0 || h <= 0 { return false; }
@@ -1029,7 +1065,27 @@ unsafe fn anno_redraw_last(l: &AnnoLast) -> bool {
     if base.len() != need || ANNO_BASE_N.load(Ordering::Relaxed) != l.idx { return false; }
     let mut img = ANNO_IMG.lock_ok();
     if img.len() != need { img.resize(need, 0); }
-    img.copy_from_slice(&base);
+    // 只还原「旧位置 ∪ 新位置」这一块：其余像素上一帧烘完就等于底图，
+    // 整张重拷在 4K 下是 33MB/次，拖滑块每移动一格都来一遍就是卡顿的来源
+    let dirty = match old {
+        Some(o) => {
+            let nb = anno_rect_of(l);
+            (
+                o.0.min(nb.0).max(0), o.1.min(nb.1).max(0),
+                o.2.max(nb.2).min(w), o.3.max(nb.3).min(h),
+            )
+        }
+        None => (0, 0, w, h),
+    };
+    if dirty.2 > dirty.0 && dirty.3 > dirty.1 {
+        let row = w as usize * 4;
+        for y in dirty.1 as usize..dirty.3 as usize {
+            let o = y * row;
+            let a = o + dirty.0 as usize * 4;
+            let b = o + dirty.2 as usize * 4;
+            img[a..b].copy_from_slice(&base[a..b]);
+        }
+    }
     anno_shape_bake(&mut img, w, h, &orig, &AnnoShape::from_last(l));
     true
 }

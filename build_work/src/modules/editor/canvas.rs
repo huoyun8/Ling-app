@@ -783,10 +783,19 @@ pub(crate) extern "system" fn anno_img_proc(hwnd: HWND, msg: UINT, wp: WPARAM, l
                         ps.push((ix, iy));
                     }
                     {
-                        // 落笔前快照：复用已有缓冲，不再每次重新分配一张整图
+                        // 落笔前快照：复用已有缓冲，不再每次重新分配一张整图。
+                        // 空闲时那张整图正躺在前缀底图里（底图对新的一笔已经作废），
+                        // 直接借过来用，两者始终只占一份内存。
+                        let need = ANNO_IMG.lock_ok().len();
+                        ANNO_BASE_N.store(-1, Ordering::Relaxed);
                         let mut pre = ANNO_PRE.lock_ok();
+                        if pre.len() != need {
+                            let mut base = ANNO_BASE.lock_ok();
+                            if base.len() == need { *pre = std::mem::take(&mut *base); }
+                            pre.resize(need, 0);
+                        }
                         let img = ANNO_IMG.lock_ok();
-                        if pre.len() == img.len() { pre.copy_from_slice(&img); } else { *pre = img.clone(); }
+                        pre.copy_from_slice(&img);
                     }
                     *ANNO_PREV_BOX.lock_ok() = (0, 0, 0, 0);
                     ANNO_DRAG.store(true, Ordering::Relaxed);
@@ -1376,9 +1385,25 @@ pub(crate) extern "system" fn anno_img_proc(hwnd: HWND, msg: UINT, wp: WPARAM, l
                                 (((lp >> 16) & 0xFFFF) as i32 - oy).clamp(0, h - 1));
                         }
                         // 撤销点就是"落笔之前"的图元表：先拍快照，再把这一笔入表
+                        let n_before = ANNO_SHAPES.lock_ok().len() as i32;
                         anno_push_undo();
                         // 记下这一条的几何：之后光标停上去要亮 8 个手柄（同时写入图元表）
                         anno_last_set(tool);
+                        // 落笔前的画面正好是「底图 + 除最后一条外的全部图元」，
+                        // 直接把它当前缀底图留着：之后拖滑块改这一条，每移动一格
+                        // 只需重烘它自己，不必把前面所有标注（含智能消除的填充）再算一遍
+                        {
+                            let idx = ANNO_LAST.lock_ok().as_ref().map(|l| l.idx).unwrap_or(-1);
+                            let n = ANNO_SHAPES.lock_ok().len() as i32;
+                            let need = (w as usize) * (h as usize) * 4;
+                            let mut pre = ANNO_PRE.lock_ok();
+                            if n == n_before + 1 && idx >= 0 && idx + 1 == n && pre.len() == need {
+                                *ANNO_BASE.lock_ok() = std::mem::take(&mut *pre);
+                                ANNO_BASE_N.store(idx, Ordering::Relaxed);
+                            } else {
+                                ANNO_BASE_N.store(-1, Ordering::Relaxed);
+                            }
+                        }
                     } else {
                         // 没成笔（只是抖了一下）：把占位色退回落笔前，别在图上留一块品红
                         if tool == 6 || tool == 7 {

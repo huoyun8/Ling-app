@@ -1,0 +1,7 @@
+cargo:rerun-if-changed=build.rs
+cargo:rustc-env=APP_NAME=SnapOCR
+cargo:rerun-if-changed=/workspace/build_work/assets/ocr-process.exe
+cargo:rerun-if-changed=/workspace/build_work/assets/PP-OCRv6_det_small.onnx
+cargo:rerun-if-changed=/workspace/build_work/assets/PP-OCRv6_rec_small.onnx
+cargo:rerun-if-changed=/workspace/build_work/assets/ppocrv6_dict.txt
+cargo:warning=未找到 rc.exe / windres，exe 将不带图标
