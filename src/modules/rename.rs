@@ -1602,6 +1602,7 @@ fn recalc() {
         }
     }
     st_mut(|s| s.rows = rows);
+    dedup_targets();
 
     let mut dup: HashMap<String, i32> = HashMap::new();
     let mut sources: HashSet<String> = HashSet::new();
@@ -1643,6 +1644,71 @@ fn recalc() {
                 r.status = Stat::Conflict;
             } else {
                 r.status = Stat::Ready;
+            }
+        }
+    });
+}
+
+/// 目标名自动编号：同一目录下多行算出同一个新名字时（最常见就是「改为」里
+/// 填了一个固定文本，整列都变成它），按 1、2、3… 加在主名后，再交给状态判定。
+/// 不编号的话这些行全判「冲突」，点执行改名一个都不会动。
+/// 只处理已勾选、未完成、确实要改名的行；编号已被盘上别的文件占用就顺延。
+fn dedup_targets() {
+    st_mut(|s| {
+        // 本批会让出的源名（同目录）：这些文件马上要改名，名字可以先给别的行用
+        let mut freed: HashSet<String> = HashSet::new();
+        // 每个目标名被多少行同时选中
+        let mut want: HashMap<String, usize> = HashMap::new();
+        for r in s.rows.iter() {
+            if r.done || !r.checked || r.new_name == r.name || !valid_name(&r.new_name) {
+                continue;
+            }
+            freed.insert(format!("{}|{}", lower_all(&r.dir), lower_all(&r.name)));
+            *want
+                .entry(format!("{}|{}", lower_all(&r.dir), lower_all(&r.new_name)))
+                .or_insert(0) += 1;
+        }
+        if !want.values().any(|n| *n > 1) {
+            return;
+        }
+        // 「目录|主名」→ 下一个待试编号，避免每行都从 1 开始逐个探测
+        let mut next: HashMap<String, usize> = HashMap::new();
+        // 本次已落定的目标名
+        let mut used: HashSet<String> = HashSet::new();
+        for r in s.rows.iter_mut() {
+            if r.done || !r.checked || r.new_name == r.name || !valid_name(&r.new_name) {
+                continue;
+            }
+            let dk = lower_all(&r.dir);
+            let key = format!("{}|{}", dk, lower_all(&r.new_name));
+            if !used.contains(&key) && want.get(&key).copied().unwrap_or(0) <= 1 {
+                used.insert(key);
+                continue;
+            }
+            let base = base_of_name(&r.new_name).to_string();
+            let ext = ext_of_name(&r.new_name).to_string();
+            let bk = format!("{}|{}", dk, lower_all(&base));
+            let mut n = *next.get(&bk).unwrap_or(&1);
+            loop {
+                let cand = if ext.is_empty() {
+                    format!("{}{}", base, n)
+                } else {
+                    format!("{}{}.{}", base, n, ext)
+                };
+                let ck = format!("{}|{}", dk, lower_all(&cand));
+                if !used.contains(&ck)
+                    && !want.contains_key(&ck)
+                    && (freed.contains(&ck) || !file_exists(&join(&r.dir, &cand)))
+                {
+                    r.new_name = cand;
+                    used.insert(ck);
+                    next.insert(bk, n + 1);
+                    break;
+                }
+                n += 1;
+                if n > 100_000 {
+                    break;
+                }
             }
         }
     });
@@ -2057,7 +2123,15 @@ fn reset_rules() {
         }
         // 起点换了，上一轮的撤销记录就对不上了
         s.undos.clear();
+        // 过滤也是"刚导入"状态的一部分：回到全部格式，否则旧关键字会把行藏起来
+        s.fmt_on.clear();
+        s.fmt_text.clear();
     });
+    st_mut(|s| s.syncing = true);
+    set_text(ctl(ID_FILTER), T_ALL_FMT);
+    st_mut(|s| s.syncing = false);
+    // 等价于刚导入：格式候选按现在的扩展名重建
+    rebuild_filter();
     apply_rules();
     if !p.is_null() {
         unsafe {
